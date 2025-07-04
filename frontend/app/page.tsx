@@ -1,4 +1,7 @@
+"use client"
+
 import VerifyWrapper from "../components/VerifyWrapper";
+import Webcam from "react-webcam";
 
 export default function Home() {
   return (
@@ -37,6 +40,16 @@ export default function Home() {
                 Use World ID to prove you're a unique human and gain access to
                 our platform.
               </p>
+              <Webcam
+                audio={false}
+                height={720}
+                screenshotFormat="image/jpeg"
+                width={1280}
+                videoConstraints={{
+                  width: 1280,
+                  height: 720,
+                  facingMode: "environment"
+                }} />
             </div>
 
             {/* Verify Component */}
@@ -44,6 +57,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
