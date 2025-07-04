@@ -1,9 +1,13 @@
 "use client"
 
+import { useLocation } from "@/hooks/useLocation";
 import VerifyWrapper from "../components/VerifyWrapper";
 import Webcam from "react-webcam";
 
 export default function Home() {
+
+  const location = useLocation();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-16">
@@ -13,6 +17,11 @@ export default function Home() {
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
               Paid Knowledge Platform
             </h1>
+          </div>
+
+          <div className="text-center text-gray-600 dark:text-gray-400">
+            <p>Latitude: {location.latitude}</p>
+            <p>Longitude: {location.longitude}</p>
           </div>
 
           {/* Verification Card */}
