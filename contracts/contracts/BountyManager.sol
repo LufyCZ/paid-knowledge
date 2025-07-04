@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 contract BountyManager {
     error BountyDoesNotExist();
+    error BountyHasExpired();
     error OnlyBountyOwner();
     error BountyIdEmpty();
     error ExpirationDateInPast();
@@ -13,6 +14,7 @@ contract BountyManager {
         address indexed owner,
         uint256 expirationDate
     );
+    event BountyExpired(bytes indexed bountyId, address indexed owner);
     event BountyClosed(bytes indexed bountyId, address indexed owner);
 
     struct BountyData {
@@ -82,9 +84,52 @@ contract BountyManager {
     function _removeFromOpenBounties(bytes memory bountyId) internal {
         for (uint256 i = 0; i < openBountyIds.length; i++) {
             if (keccak256(openBountyIds[i]) == keccak256(bountyId)) {
-                openBountyIds[i] = openBountyIds[openBountyIds.length - 1];
+                    openBountyIds[i] = openBountyIds[openBountyIds.length - 1];
                 openBountyIds.pop();
                 break;
+            }
+        }
+    }
+
+    function getBountiesByOwner(
+        address owner
+    ) public view returns (bytes[] memory) {
+        return bountyOwnerToBounties[owner];
+    }
+
+    function getAllOpenBounties() public view returns (bytes[] memory) {
+        return openBountyIds;
+    }
+
+    function getBountyData(
+        bytes memory bountyId
+    ) public view bountyExists(bountyId) returns (BountyData memory) {
+        return bountiesToBountyData[bountyId];
+    }
+
+    function isBountyExpired(bytes memory bountyId) public view returns (bool) {
+        return block.timestamp >= bountiesToBountyData[bountyId].expirationDate;
+    }
+
+    function getOpenBountyCount() public view returns (uint256) {
+        return openBountyIds.length;
+    }
+
+    function getBountyCountByOwner(
+        address owner
+    ) public view returns (uint256) {
+        return bountyOwnerToBounties[owner].length;
+    }
+
+    function cleanupExpiredBounties(bytes[] memory bountyIds) external {
+        for (uint256 i = 0; i < bountyIds.length; i++) {
+            bytes memory bountyId = bountyIds[i];
+            BountyData storage bounty = bountiesToBountyData[bountyId];
+
+            if (bounty.isActive && isBountyExpired(bountyId)) {
+                bounty.isActive = false;
+                _removeFromOpenBounties(bountyId);
+                emit BountyExpired(bountyId, bounty.owner);
             }
         }
     }
