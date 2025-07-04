@@ -1,22 +1,20 @@
 "use client";
 
 import {
-  QueryCache,
   QueryClient,
   QueryClientProvider,
+  QueryCache,
   isServer,
 } from "@tanstack/react-query";
 import { MiniKit } from "@worldcoin/minikit-js";
-import { useEffect } from "react";
-
-// @tanstack/react-query
+import { createContext, useContext, useEffect, useState } from "react";
 
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        gcTime: 1000 * 60 * 60 * 24, // 24 hours
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        gcTime: 1000 * 60 * 60 * 24,
+        staleTime: 1000 * 60 * 5,
       },
     },
     queryCache: new QueryCache(),
@@ -25,27 +23,39 @@ function makeQueryClient() {
 
 let clientQueryClientSingleton: QueryClient | undefined = undefined;
 const getQueryClient = () => {
-  if (isServer) {
-    return makeQueryClient();
-  }
+  if (isServer) return makeQueryClient();
 
   if (!clientQueryClientSingleton) {
     clientQueryClientSingleton = makeQueryClient();
   }
-
   return clientQueryClientSingleton;
 };
 
-export function Providers({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const client = getQueryClient();
+// ---- MiniKit Context ----
+const MiniKitContext = createContext<{ installed: boolean }>({
+  installed: false,
+});
+export const useMiniKit = () => useContext(MiniKitContext);
+
+// ---- Provider Wrapper ----
+export function Providers({ children }: { children: React.ReactNode }) {
+  const queryClient = getQueryClient();
+  const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
     MiniKit.install();
+    setInstalled(true);
+
+    import("eruda").then((eruda) => {
+      eruda.default.init();
+    });
   }, []);
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MiniKitContext.Provider value={{ installed }}>
+        {children}
+      </MiniKitContext.Provider>
+    </QueryClientProvider>
+  );
 }
