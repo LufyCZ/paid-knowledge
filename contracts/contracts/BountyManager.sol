@@ -8,6 +8,13 @@ contract BountyManager {
     error ExpirationDateInPast();
     error BountyIdAlreadyExists();
 
+    event BountyCreated(
+        bytes indexed bountyId,
+        address indexed owner,
+        uint256 expirationDate
+    );
+    event BountyClosed(bytes indexed bountyId, address indexed owner);
+
     struct BountyData {
         bytes bountyId;
         address owner;
@@ -54,6 +61,8 @@ contract BountyManager {
         bountiesToBountyData[bountyId] = newBounty;
 
         openBountyIds.push(bountyId);
+
+        emit BountyCreated(bountyId, msg.sender, expirationDate);
     }
 
     function closeBounty(
@@ -65,6 +74,18 @@ contract BountyManager {
     {
         bountiesToBountyData[bountyId].isActive = false;
 
-        // removeFromBounties(bountyId);
+        _removeFromOpenBounties(bountyId);
+
+        emit BountyClosed(bountyId, msg.sender);
+    }
+
+    function _removeFromOpenBounties(bytes memory bountyId) internal {
+        for (uint256 i = 0; i < openBountyIds.length; i++) {
+            if (keccak256(openBountyIds[i]) == keccak256(bountyId)) {
+                openBountyIds[i] = openBountyIds[openBountyIds.length - 1];
+                openBountyIds.pop();
+                break;
+            }
+        }
     }
 }
