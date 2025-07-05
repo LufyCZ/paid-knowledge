@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBountyForm, CreateFormData } from "../../lib/forms";
 import { useWallet } from "../../hooks/useWallet";
 import { PaymentModal } from "../../components/PaymentModal";
@@ -30,6 +31,7 @@ export default function FormBuilder() {
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [insertIndex, setInsertIndex] = useState<number | undefined>(undefined);
   const [showFormSetup, setShowFormSetup] = useState(false);
+  const [showPaymentStep, setShowPaymentStep] = useState(false);
 
   const openTypeMenu = (index?: number) => {
     setInsertIndex(index);
@@ -214,6 +216,28 @@ export default function FormBuilder() {
         <FormSetupPage
           questions={questions}
           onBack={() => setShowFormSetup(false)}
+          onContinueToPayment={(formData: {
+            name: string;
+            description: string;
+            startDate: string;
+            endDate: string;
+          }) => {
+            // Save form data to localStorage for the payment step
+            localStorage.setItem("pendingFormData", JSON.stringify(formData));
+            setShowFormSetup(false);
+            setShowPaymentStep(true);
+          }}
+        />
+      )}
+
+      {/* Payment Step */}
+      {showPaymentStep && (
+        <PaymentStepPage
+          questions={questions}
+          onBack={() => {
+            setShowPaymentStep(false);
+            setShowFormSetup(true);
+          }}
         />
       )}
     </div>
@@ -417,41 +441,26 @@ function ChoiceOptionEditor({
 function FormSetupPage({
   questions,
   onBack,
+  onContinueToPayment,
 }: {
   questions: Question[];
   onBack: () => void;
+  onContinueToPayment: (formData: {
+    name: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+  }) => void;
 }) {
   const [formName, setFormName] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentData, setPaymentData] = useState<{
-    amount: number;
-    token: "USDC" | "WLD";
-    transactionId: string;
-    maxQuestions: number;
-    rewardPerQuestion: number;
-  } | null>(null);
 
   const { isConnected, connect } = useWallet();
 
-  const handlePaymentSuccess = (payment: {
-    amount: number;
-    token: "USDC" | "WLD";
-    transactionId: string;
-    maxQuestions: number;
-    rewardPerQuestion: number;
-  }) => {
-    setPaymentData(payment);
-    setShowPaymentModal(false);
-    // Proceed with form creation after successful payment
-    handleSave();
-  };
-
-  const initiatePayment = () => {
+  const handleContinueToPayment = () => {
     if (!isConnected) {
       alert("Please connect your wallet first to proceed with payment.");
       return;
@@ -470,61 +479,12 @@ function FormSetupPage({
     }
 
     setError(null);
-    setShowPaymentModal(true);
-  };
-
-  const handleSave = async () => {
-    if (!paymentData) {
-      setError("Payment is required to create the form.");
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const formData: CreateFormData = {
-        name: formName,
-        description,
-        startDate,
-        endDate,
-        visibility: "Public", // Always public
-        rewardPerQuestion: paymentData.rewardPerQuestion,
-        rewardToken: paymentData.token,
-        questions: questions.map((q) => ({
-          id: q.id,
-          title: q.title,
-          description: q.description,
-          type: q.type,
-          options: q.options,
-        })),
-        paymentData: {
-          amount: paymentData.amount,
-          transactionId: paymentData.transactionId,
-          maxQuestions: paymentData.maxQuestions,
-        },
-      };
-
-      const result = await createBountyForm(formData);
-
-      if (result.success) {
-        console.log("Form created successfully:", result.form);
-
-        // Redirect to success page instead of just showing alert
-        window.location.href = `/form-success?name=${encodeURIComponent(
-          formData.name
-        )}&amount=${paymentData.amount}&token=${paymentData.token}&questions=${
-          paymentData.maxQuestions
-        }&txId=${paymentData.transactionId}`;
-      } else {
-        setError(result.error || "Failed to create form");
-      }
-    } catch (err) {
-      console.error("Error creating form:", err);
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    onContinueToPayment({
+      name: formName,
+      description,
+      startDate,
+      endDate,
+    });
   };
 
   return (
@@ -605,25 +565,6 @@ function FormSetupPage({
             </div>
           )}
 
-          {/* Payment Success */}
-          {paymentData && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="text-green-600">✅</span>
-                <p className="text-sm font-medium text-green-800">
-                  Payment Successful
-                </p>
-              </div>
-              <div className="text-xs text-green-700 space-y-1">
-                <div>
-                  Paid: {paymentData.amount} {paymentData.token}
-                </div>
-                <div>Max questions fundable: {paymentData.maxQuestions}</div>
-                <div>Transaction: {paymentData.transactionId}</div>
-              </div>
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Form Name *
@@ -692,48 +633,237 @@ function FormSetupPage({
         </div>
       </div>
 
-      {/* Fixed Save Button */}
+      {/* Fixed Continue Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-20">
         <div className="max-w-2xl mx-auto">
-          {!paymentData ? (
-            <button
-              onClick={initiatePayment}
-              disabled={
-                !formName || !startDate || !endDate || !isConnected || isLoading
-              }
-              className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation flex items-center justify-center space-x-2"
-            >
-              <span>💳</span>
-              <span>Fund Form & Continue</span>
-            </button>
-          ) : (
-            <button
-              onClick={handleSave}
-              disabled={isLoading}
-              className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation flex items-center justify-center space-x-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Creating Form...</span>
-                </>
-              ) : (
-                <>
-                  <span>🚀</span>
-                  <span>Create Bounty Form</span>
-                </>
+          <button
+            onClick={handleContinueToPayment}
+            disabled={!formName || !startDate || !endDate || !isConnected}
+            className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation flex items-center justify-center space-x-2"
+          >
+            <span>💳</span>
+            <span>Continue to Payment</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PaymentStepPage({
+  questions,
+  onBack,
+}: {
+  questions: Question[];
+  onBack: () => void;
+}) {
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(true);
+
+  const router = useRouter();
+  const { isConnected } = useWallet();
+
+  // Get form data from localStorage or previous step
+  React.useEffect(() => {
+    const savedFormData = localStorage.getItem("pendingFormData");
+    if (savedFormData) {
+      setFormData(JSON.parse(savedFormData));
+    }
+  }, []);
+
+  const handlePaymentSuccess = async (payment: {
+    amount: number;
+    token: "USDC" | "WLD";
+    transactionId: string;
+    maxQuestions: number;
+    rewardPerQuestion: number;
+  }) => {
+    setShowPaymentModal(false);
+    setIsLoading(true);
+    setError(null);
+
+    if (!formData) {
+      setError("Form data is missing. Please go back and try again.");
+      return;
+    }
+
+    try {
+      const createFormData: CreateFormData = {
+        name: formData.name,
+        description: formData.description,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        visibility: "Public", // Always public
+        rewardPerQuestion: payment.rewardPerQuestion,
+        rewardToken: payment.token,
+        questions: questions.map((q) => ({
+          id: q.id,
+          title: q.title,
+          description: q.description,
+          type: q.type,
+          options: q.options,
+        })),
+        paymentData: {
+          amount: payment.amount,
+          transactionId: payment.transactionId,
+          maxQuestions: payment.maxQuestions,
+        },
+      };
+
+      const result = await createBountyForm(createFormData);
+
+      if (result.success) {
+        console.log("Form created successfully:", result.form);
+
+        // Clear saved form data
+        localStorage.removeItem("pendingFormData");
+
+        // Redirect directly to success page
+        router.push(
+          `/form-success?name=${encodeURIComponent(formData.name)}&amount=${
+            payment.amount
+          }&token=${payment.token}&questions=${payment.maxQuestions}&txId=${
+            payment.transactionId
+          }`
+        );
+      } else {
+        setError(result.error || "Failed to create form");
+        setShowPaymentModal(true); // Show payment modal again
+      }
+    } catch (err) {
+      console.error("Error creating form:", err);
+      setError("An unexpected error occurred. Please try again.");
+      setShowPaymentModal(true); // Show payment modal again
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentModal(false);
+    onBack();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b px-4 py-3 sticky top-0 z-10">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={onBack}
+            disabled={isLoading}
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            ←
+          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Fund Your Form
+          </h1>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
+        {/* Form Summary */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Form Summary
+          </h3>
+
+          {formData && (
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm font-medium text-gray-600">
+                  Form Name:
+                </span>
+                <p className="text-gray-900">{formData.name}</p>
+              </div>
+              {formData.description && (
+                <div>
+                  <span className="text-sm font-medium text-gray-600">
+                    Description:
+                  </span>
+                  <p className="text-gray-900">{formData.description}</p>
+                </div>
               )}
-            </button>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm font-medium text-gray-600">
+                    Start Date:
+                  </span>
+                  <p className="text-gray-900">{formData.startDate}</p>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-600">
+                    End Date:
+                  </span>
+                  <p className="text-gray-900">{formData.endDate}</p>
+                </div>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600">
+                  Questions:
+                </span>
+                <p className="text-gray-900">{questions.length} questions</p>
+              </div>
+            </div>
           )}
         </div>
+
+        {/* Payment Instructions */}
+        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+          <div className="flex items-center space-x-3 mb-3">
+            <span className="text-2xl">💳</span>
+            <h3 className="text-lg font-semibold text-blue-900">
+              Payment Required
+            </h3>
+          </div>
+          <p className="text-blue-800 mb-3">
+            To activate your form and make it available for participants, you
+            need to fund it with rewards.
+          </p>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• Choose how many questions to fund</li>
+            <li>• Set reward amount per question</li>
+            <li>• Select payment token (USDC or WLD)</li>
+            <li>• Complete payment to activate your form</li>
+          </ul>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <span className="text-red-600">❌</span>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-200 text-center">
+            <div className="flex items-center justify-center space-x-3">
+              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-gray-700">Creating your form...</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Payment Modal */}
       <PaymentModal
         isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
+        onClose={handlePaymentCancel}
         onPaymentSuccess={handlePaymentSuccess}
-        formName={formName}
+        formName={formData?.name || "Your Form"}
       />
     </div>
   );
