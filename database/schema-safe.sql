@@ -1,22 +1,36 @@
--- Supabase SQL Schema for Paid Knowledge Bounty Forms
+-- Supabase SQL Schema for Paid Knowledge Bounty Forms (Migration Safe)
 -- Run this in your Supabase SQL Editor
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create custom types (drop and recreate to avoid conflicts)
-DROP TYPE IF EXISTS visibility_type CASCADE;
-DROP TYPE IF EXISTS reward_token_type CASCADE;
-DROP TYPE IF EXISTS form_status_type CASCADE;
-DROP TYPE IF EXISTS response_status_type CASCADE;
+-- Create custom types (only if they don't exist)
+DO $$ BEGIN
+    CREATE TYPE visibility_type AS ENUM ('Public', 'Private');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE visibility_type AS ENUM ('Public', 'Private');
-CREATE TYPE reward_token_type AS ENUM ('USDC', 'WLD');
-CREATE TYPE form_status_type AS ENUM ('draft', 'active', 'completed', 'cancelled');
-CREATE TYPE response_status_type AS ENUM ('pending', 'approved', 'rejected', 'paid');
+DO $$ BEGIN
+    CREATE TYPE reward_token_type AS ENUM ('USDC', 'WLD');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE form_status_type AS ENUM ('draft', 'active', 'completed', 'cancelled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE response_status_type AS ENUM ('pending', 'approved', 'rejected', 'paid');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- 1. Bounty Forms Table
-CREATE TABLE bounty_forms (
+CREATE TABLE IF NOT EXISTS bounty_forms (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -35,7 +49,7 @@ CREATE TABLE bounty_forms (
 );
 
 -- 2. Form Questions Table
-CREATE TABLE form_questions (
+CREATE TABLE IF NOT EXISTS form_questions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   form_id UUID NOT NULL REFERENCES bounty_forms(id) ON DELETE CASCADE,
   title VARCHAR(500) NOT NULL,
@@ -51,7 +65,7 @@ CREATE TABLE form_questions (
 );
 
 -- 3. Form Responses Table (for users who submit the form)
-CREATE TABLE form_responses (
+CREATE TABLE IF NOT EXISTS form_responses (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   form_id UUID NOT NULL REFERENCES bounty_forms(id) ON DELETE CASCADE,
   user_id UUID, -- For future user authentication
@@ -63,7 +77,7 @@ CREATE TABLE form_responses (
 );
 
 -- 4. Question Answers Table (individual answers within a response)
-CREATE TABLE question_answers (
+CREATE TABLE IF NOT EXISTS question_answers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   response_id UUID NOT NULL REFERENCES form_responses(id) ON DELETE CASCADE,
   question_id UUID NOT NULL REFERENCES form_questions(id) ON DELETE CASCADE,
@@ -77,7 +91,7 @@ CREATE TABLE question_answers (
 );
 
 -- 5. Payment References Table (for tracking Worldcoin payments)
-CREATE TABLE payment_references (
+CREATE TABLE IF NOT EXISTS payment_references (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   reference_id VARCHAR(255) NOT NULL UNIQUE, -- The reference ID used in Worldcoin payment
   transaction_id VARCHAR(255), -- The transaction ID from Worldcoin
@@ -91,17 +105,66 @@ CREATE TABLE payment_references (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create indexes for better performance
-CREATE INDEX idx_bounty_forms_creator ON bounty_forms(creator_id);
-CREATE INDEX idx_bounty_forms_status ON bounty_forms(status);
-CREATE INDEX idx_bounty_forms_dates ON bounty_forms(start_date, end_date);
-CREATE INDEX idx_form_questions_form ON form_questions(form_id, order_index);
-CREATE INDEX idx_form_responses_form ON form_responses(form_id);
-CREATE INDEX idx_form_responses_wallet ON form_responses(wallet_address);
-CREATE INDEX idx_question_answers_response ON question_answers(response_id);
-CREATE INDEX idx_payment_references_ref ON payment_references(reference_id);
-CREATE INDEX idx_payment_references_status ON payment_references(status);
-CREATE INDEX idx_payment_references_transaction ON payment_references(transaction_id);
+-- Create indexes for better performance (only if they don't exist)
+DO $$ BEGIN
+    CREATE INDEX idx_bounty_forms_creator ON bounty_forms(creator_id);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_bounty_forms_status ON bounty_forms(status);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_bounty_forms_dates ON bounty_forms(start_date, end_date);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_form_questions_form ON form_questions(form_id, order_index);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_form_responses_form ON form_responses(form_id);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_form_responses_wallet ON form_responses(wallet_address);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_question_answers_response ON question_answers(response_id);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_payment_references_ref ON payment_references(reference_id);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_payment_references_status ON payment_references(status);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE INDEX idx_payment_references_transaction ON payment_references(transaction_id);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -112,15 +175,18 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Add triggers for updated_at
+-- Add triggers for updated_at (drop first if they exist)
+DROP TRIGGER IF EXISTS update_bounty_forms_updated_at ON bounty_forms;
 CREATE TRIGGER update_bounty_forms_updated_at 
   BEFORE UPDATE ON bounty_forms 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_form_questions_updated_at ON form_questions;
 CREATE TRIGGER update_form_questions_updated_at 
   BEFORE UPDATE ON form_questions 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_payment_references_updated_at ON payment_references;
 CREATE TRIGGER update_payment_references_updated_at 
   BEFORE UPDATE ON payment_references 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -131,6 +197,14 @@ ALTER TABLE form_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE form_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE question_answers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_references ENABLE ROW LEVEL SECURITY;
+
+-- Create policies (drop existing ones first to avoid conflicts)
+DROP POLICY IF EXISTS "Public forms are viewable by everyone" ON bounty_forms;
+DROP POLICY IF EXISTS "Enable all operations for authenticated users" ON bounty_forms;
+DROP POLICY IF EXISTS "Enable all operations for form questions" ON form_questions;
+DROP POLICY IF EXISTS "Enable all operations for form responses" ON form_responses;
+DROP POLICY IF EXISTS "Enable all operations for question answers" ON question_answers;
+DROP POLICY IF EXISTS "Enable all operations for payment references" ON payment_references;
 
 -- Create policies (allowing all operations for now - adjust based on your auth needs)
 -- For public read access to active forms
@@ -156,4 +230,5 @@ CREATE POLICY "Enable all operations for payment references" ON payment_referenc
 -- Insert some sample data (optional)
 -- INSERT INTO bounty_forms (name, description, start_date, end_date, visibility, reward_per_question, reward_token) 
 -- VALUES 
--- ('Sample Survey', 'A sample bounty form for testing', '2025-01-01', '2025-12-31', 'Public', 1.00, 'USDC');
+-- ('Sample Survey', 'A sample bounty form for testing', '2025-01-01', '2025-12-31', 'Public', 1.00, 'USDC')
+-- ON CONFLICT DO NOTHING;

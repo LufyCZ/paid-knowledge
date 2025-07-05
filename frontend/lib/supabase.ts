@@ -149,6 +149,47 @@ export interface Database {
           created_at?: string;
         };
       };
+      payment_references: {
+        Row: {
+          id: string;
+          reference_id: string;
+          transaction_id: string | null;
+          status: string;
+          form_id: string | null;
+          response_id: string | null;
+          metadata: any;
+          verification_result: any;
+          initiated_at: string;
+          confirmed_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          reference_id: string;
+          transaction_id?: string | null;
+          status?: string;
+          form_id?: string | null;
+          response_id?: string | null;
+          metadata?: any;
+          verification_result?: any;
+          initiated_at?: string;
+          confirmed_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          reference_id?: string;
+          transaction_id?: string | null;
+          status?: string;
+          form_id?: string | null;
+          response_id?: string | null;
+          metadata?: any;
+          verification_result?: any;
+          initiated_at?: string;
+          confirmed_at?: string | null;
+          updated_at?: string;
+        };
+      };
     };
   };
 }
@@ -160,3 +201,5 @@ export type FormResponse =
   Database["public"]["Tables"]["form_responses"]["Row"];
 export type QuestionAnswer =
   Database["public"]["Tables"]["question_answers"]["Row"];
+export type PaymentReference =
+  Database["public"]["Tables"]["payment_references"]["Row"];

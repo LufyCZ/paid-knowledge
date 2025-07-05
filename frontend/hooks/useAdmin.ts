@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { AdminService } from "../lib/supabase-admin";
 
 // Hook for admin form management
-export function useAdminForms() {
+export const useAdminForms = () => {
   const [forms, setForms] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export function useAdminForms() {
     updateFormStatus,
     deleteForm,
   };
-}
+};
 
 // Hook for admin dashboard stats
 export function useAdminStats() {

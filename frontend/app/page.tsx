@@ -18,12 +18,19 @@ export default function Home() {
           </div>
 
           {/* Mebu */}
-          <div className="mb-8">
+          <div className="mb-8 flex justify-center items-center">
             <Link
               href="/form-builder"
               className="inline-block bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
             >
               ➕ Create New Form
+            </Link>
+
+            <Link
+              href="/payment-test"
+              className="ml-4 inline-block bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
+            >
+              🛠️ Payment Test
             </Link>
           </div>
 
