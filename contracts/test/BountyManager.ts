@@ -12,6 +12,7 @@ describe("BountyManager", function () {
     let user2: any;
     let user3: any;
     let mockUSDC: any;
+    let mockWLD: any;
 
     async function getFutureTimestamp(secondsFromNow: number = 3600): Promise<number> {
         const currentBlock = await ethersInstance.provider.getBlock("latest");
@@ -28,7 +29,10 @@ describe("BountyManager", function () {
         const MockUSDC = await ethersInstance.getContractFactory("MockERC20");
         mockUSDC = await MockUSDC.deploy("Mock USDC", "USDC");
 
-        bountyManager = await new BountyManager__factory(owner).deploy(mockUSDC.target);
+        const MockWLD = await ethersInstance.getContractFactory("MockERC20");
+        mockWLD = await MockWLD.deploy("Mock WLD", "WLD");
+
+        bountyManager = await new BountyManager__factory(owner).deploy(mockUSDC.target, mockWLD.target);
     });
 
     describe("Deployment", function () {
@@ -39,6 +43,11 @@ describe("BountyManager", function () {
         it("Should set USDC address correctly", async function () {
             const usdcAddress = await bountyManager.usdc();
             expect(usdcAddress).to.equal(mockUSDC.target);
+        });
+
+        it("Should set WLD address correctly", async function () {
+            const wldAddress = await bountyManager.wld();
+            expect(wldAddress).to.equal(mockWLD.target);
         });
     });
 
@@ -266,19 +275,16 @@ describe("BountyManager", function () {
 
             await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId));
 
-            await user1.sendTransaction({
-                to: bountyManager.target,
-                value: totalValue
-            });
+            await mockWLD.mint(bountyManager.target, totalValue);
 
             await bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address);
 
-            const initialBalance = await ethersInstance.provider.getBalance(user2.address);
+            const initialBalance = await mockWLD.balanceOf(user2.address);
 
             await expect(bountyManager.connect(user1).payoutBounty(bountyId, answerId))
                 .to.emit(bountyManager, "BountyPaidOut");
 
-            const finalBalance = await ethersInstance.provider.getBalance(user2.address);
+            const finalBalance = await mockWLD.balanceOf(user2.address);
             expect(finalBalance).to.equal(initialBalance + BigInt(perProofValue));
 
             const bountyData = await bountyManager.bountiesToBountyData(bountyId);
@@ -372,10 +378,7 @@ describe("BountyManager", function () {
 
             await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId));
 
-            await user1.sendTransaction({
-                to: bountyManager.target,
-                value: totalValue
-            });
+            await mockWLD.mint(bountyManager.target, totalValue);
 
             await bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address);
             await bountyManager.connect(user3).answerBounty(bountyId, answerId2, user3.address);
@@ -413,27 +416,21 @@ describe("BountyManager", function () {
             await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId1));
             await bountyManager.connect(user2).createBounty(bountyId2, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId2));
 
-            await user1.sendTransaction({
-                to: bountyManager.target,
-                value: totalValue
-            });
-            await user2.sendTransaction({
-                to: bountyManager.target,
-                value: totalValue
-            });
+            await mockWLD.mint(bountyManager.target, totalValue);
+            await mockWLD.mint(bountyManager.target, totalValue);
 
             await bountyManager.connect(user3).answerBounty(bountyId1, answerId1, user3.address);
             await bountyManager.connect(user2).answerBounty(bountyId2, answerId2, user2.address);
 
-            const initialBalance1 = await ethersInstance.provider.getBalance(user3.address);
-            const initialBalance2 = await ethersInstance.provider.getBalance(user2.address);
+            const initialBalance1 = await mockWLD.balanceOf(user3.address);
+            const initialBalance2 = await mockWLD.balanceOf(user2.address);
 
             await expect(bountyManager.connect(user1).payoutBountyBatch([bountyId1, bountyId2], [answerId1, answerId2]))
                 .to.emit(bountyManager, "BountyPaidOut")
                 .to.emit(bountyManager, "BountyPaidOut");
 
-            const finalBalance1 = await ethersInstance.provider.getBalance(user3.address);
-            const finalBalance2 = await ethersInstance.provider.getBalance(user2.address);
+            const finalBalance1 = await mockWLD.balanceOf(user3.address);
+            const finalBalance2 = await mockWLD.balanceOf(user2.address);
 
             expect(finalBalance1).to.equal(initialBalance1 + perProofValue);
             expect(finalBalance2).to.equal(initialBalance2 + perProofValue);

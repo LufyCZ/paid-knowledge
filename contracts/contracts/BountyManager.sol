@@ -55,6 +55,7 @@ contract BountyManager {
     mapping(bytes => bytes) public dataHashToBountyId;
     mapping(bytes => AnswerData[]) public bountyIdToAnswers;
     address public usdc;
+    address public wld;
 
     // THIS IS NOT PRODUCTION READY, WE USED THIS AS A FORM OF ONCHAIN INDEXING
     // SO WE DONT HAVE TO INDEX EVENTS OR USE A DB FOR THIS HACKATHON
@@ -72,8 +73,9 @@ contract BountyManager {
         _;
     }
 
-    constructor(address _usdc) {
+    constructor(address _usdc, address _wld) {
         usdc = _usdc;
+        wld = _wld;
     }
 
     function createBounty(
@@ -126,7 +128,9 @@ contract BountyManager {
             }
         }
 
-        bountyIdToAnswers[bountyId].push(AnswerData({answerId: answerId, answerer: answerer}));
+        bountyIdToAnswers[bountyId].push(
+            AnswerData({answerId: answerId, answerer: answerer})
+        );
     }
 
     function payoutBounty(
@@ -150,7 +154,7 @@ contract BountyManager {
         bounty.totalValueLeft -= bounty.perProofValue;
 
         if (bounty.currency == Currency.WLD) {
-            payable(recipient).transfer(bounty.perProofValue);
+            IERC20(wld).transfer(recipient, bounty.perProofValue);
         } else if (bounty.currency == Currency.USDC) {
             IERC20(usdc).transfer(recipient, bounty.perProofValue);
         } else {
