@@ -6,6 +6,7 @@ export const questionSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   form: formSchema,
+  // verificationLevel: z.union([z.literal("device"), z.literal("orb")]),
   reward: z.object({
     amount: z.string().describe("The amount of the reward that the user will receive for answering the question"),
     currency: z.union([z.literal("USDC"), z.literal("WLD")]).describe("The currency of the reward"),

@@ -28,13 +28,19 @@ export const answerCreate = publicProcedure.input(z.object({ answer: answerSchem
     throw new Error('You have already answered this question');
   }
 
+  // // Check if the user's verification level is sufficient
+  // const question = await ctx.walrusClient.readBlob({
+  //   blobId: input.answer.questionId,
+  // }).then(blob => new TextDecoder().decode(blob))
+  //   .then(text => JSON.parse(text)).then(data => questionSchema.parse(data))
+
   // Upload the answer to Walrus
   const file = new TextEncoder().encode(JSON.stringify(input.answer));
   const blob = await ctx.walrusClient.writeBlob({
     blob: file,
     deletable: false,
     epochs: 10,
-    signer: ctx.walrusSigner,
+    signer: ctx.walrusSigner
   })
 
   // Add the blob id to the question's answers onchain
