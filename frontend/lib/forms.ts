@@ -9,6 +9,7 @@ export interface CreateFormData {
   visibility: "Public" | "Private";
   rewardPerQuestion: number;
   rewardToken: "USDC" | "WLD";
+  userEligibility?: "Orb" | "Device" | "All";
   questions: {
     id: number;
     title: string;
@@ -37,6 +38,7 @@ export async function createBountyForm(formData: CreateFormData) {
         visibility: formData.visibility,
         reward_per_question: formData.rewardPerQuestion,
         reward_token: formData.rewardToken,
+        user_eligibility: formData.userEligibility || "All",
         status: formData.paymentData ? "active" : "draft", // Active if funded, draft otherwise
       })
       .select()

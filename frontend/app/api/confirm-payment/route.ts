@@ -71,6 +71,8 @@ export async function POST(req: NextRequest) {
 
     const transaction = await response.json();
 
+    console.log(transaction);
+
     // 3. Verify the transaction details match our expectations
     if (
       transaction.reference !== payload.reference ||

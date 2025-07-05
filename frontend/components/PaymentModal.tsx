@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWorldPay } from "../hooks/useWorldPay";
 import { Button } from "./ui/button";
 
@@ -28,14 +28,19 @@ export function PaymentModal({
   const [isCustom, setIsCustom] = useState(false);
   const [rewardPerQuestion, setRewardPerQuestion] = useState("");
   const [rewardToken, setRewardToken] = useState<"USDC" | "WLD">("USDC");
+  const [tokenPrice, setTokenPrice] = useState<{ USDC: number; WLD: number }>({
+    USDC: 1,
+    WLD: 0,
+  });
+  const [priceLoading, setPriceLoading] = useState(false);
 
   const { payUSDC, payWLD, isLoading, error, clearError } = useWorldPay();
 
-  // Preset question amounts
+  // Preset response amounts
   const presetQuestions = [
-    { label: "10 Questions", value: 10 },
-    { label: "25 Questions", value: 25 },
-    { label: "50 Questions", value: 50 },
+    { label: "10 Responses", value: 10 },
+    { label: "25 Responses", value: 25 },
+    { label: "50 Responses", value: 50 },
   ];
 
   const finalQuestions = isCustom
@@ -43,6 +48,30 @@ export function PaymentModal({
     : numQuestions || 0;
   const rewardPerQuestionNum = parseFloat(rewardPerQuestion) || 0;
   const totalAmount = finalQuestions * rewardPerQuestionNum;
+
+  useEffect(() => {
+    const fetchTokenPrices = async () => {
+      setPriceLoading(true);
+      try {
+        const response = await fetch("/api/get-onchain-prices");
+        const data = await response.json();
+
+        if (data.prices) {
+          setTokenPrice({
+            USDC: data.prices.USDCE || 1, // USDCE from the API
+            WLD: data.prices.WLD || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching token prices:", error);
+        // Keep default values on error
+      } finally {
+        setPriceLoading(false);
+      }
+    };
+
+    fetchTokenPrices();
+  }, []);
 
   const handlePresetSelect = (questions: number) => {
     setNumQuestions(questions);
@@ -131,6 +160,13 @@ export function PaymentModal({
                   }`}
                 >
                   <div className="font-medium">USDC</div>
+                  {priceLoading ? (
+                    <div className="text-xs text-gray-500">Loading...</div>
+                  ) : (
+                    <div className="text-xs text-gray-500">
+                      ${tokenPrice.USDC.toFixed(4)}
+                    </div>
+                  )}
                 </button>
 
                 <button
@@ -142,14 +178,38 @@ export function PaymentModal({
                   }`}
                 >
                   <div className="font-medium">WLD</div>
+                  {priceLoading ? (
+                    <div className="text-xs text-gray-500">Loading...</div>
+                  ) : (
+                    <div className="text-xs text-gray-500">
+                      ${tokenPrice.WLD.toFixed(4)}
+                    </div>
+                  )}
                 </button>
               </div>
+              {/* Show USD equivalent for WLD payments */}
+              {rewardToken === "WLD" &&
+                rewardPerQuestionNum > 0 &&
+                !priceLoading && (
+                  <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-600">
+                      ≈ ${(rewardPerQuestionNum * tokenPrice.WLD).toFixed(4)}{" "}
+                      USD per response
+                    </div>
+                    {finalQuestions > 0 && (
+                      <div className="text-xs text-gray-600">
+                        Total: ≈ ${(totalAmount * tokenPrice.WLD).toFixed(2)}{" "}
+                        USD
+                      </div>
+                    )}
+                  </div>
+                )}
             </div>
 
-            {/* Reward per Question */}
+            {/* Reward per Form Completion */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Reward per Question *
+                Reward per Form Completion *
               </label>
               <input
                 type="number"
@@ -161,16 +221,17 @@ export function PaymentModal({
                 className="w-full p-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Amount each participant will receive per question answered
+                Amount each participant will receive for completing the entire
+                form
               </p>
             </div>
 
             {/* Number of Questions Selection */}
             <div>
+              {" "}
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                How many questions do you want to fund?
-              </label>
-
+                How many form completions do you want to fund?
+              </label>{" "}
               {/* Preset Questions */}
               <div className="space-y-3 mb-4">
                 {presetQuestions.map((preset) => (
@@ -184,7 +245,9 @@ export function PaymentModal({
                     }`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-medium">{preset.label}</span>
+                      <span className="font-medium">
+                        {preset.label.replace("Questions", "Responses")}
+                      </span>
                       {rewardPerQuestionNum > 0 && (
                         <span className="text-sm text-gray-600">
                           {(preset.value * rewardPerQuestionNum).toFixed(2)}{" "}
@@ -195,7 +258,6 @@ export function PaymentModal({
                   </button>
                 ))}
               </div>
-
               {/* Custom Questions */}
               <button
                 onClick={handleCustomSelect}
@@ -207,11 +269,10 @@ export function PaymentModal({
               >
                 <span className="font-medium">Custom Amount</span>
               </button>
-
               {isCustom && (
                 <input
                   type="number"
-                  placeholder="Enter number of questions"
+                  placeholder="Enter number of responses to fund"
                   value={customQuestions}
                   onChange={(e) => setCustomQuestions(e.target.value)}
                   min="1"
@@ -229,13 +290,13 @@ export function PaymentModal({
                 </h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-blue-700">Questions to fund:</span>
+                    <span className="text-blue-700">Responses to fund:</span>
                     <span className="font-medium text-blue-900">
                       {finalQuestions}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-blue-700">Reward per question:</span>
+                    <span className="text-blue-700">Reward per response:</span>
                     <span className="font-medium text-blue-900">
                       {rewardPerQuestionNum} {rewardToken}
                     </span>
@@ -295,8 +356,8 @@ export function PaymentModal({
           </button>
 
           <div className="text-xs text-gray-500 text-center">
-            Your payment will be held securely and distributed to form
-            participants as rewards.
+            Your payment will fund participant rewards. You will manually
+            distribute rewards to participants who complete your form.
           </div>
         </div>
       </div>

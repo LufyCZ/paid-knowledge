@@ -221,6 +221,7 @@ export default function FormBuilder() {
             description: string;
             startDate: string;
             endDate: string;
+            userEligibility: "Orb" | "Device" | "All";
           }) => {
             // Save form data to localStorage for the payment step
             localStorage.setItem("pendingFormData", JSON.stringify(formData));
@@ -450,12 +451,16 @@ function FormSetupPage({
     description: string;
     startDate: string;
     endDate: string;
+    userEligibility: "Orb" | "Device" | "All";
   }) => void;
 }) {
   const [formName, setFormName] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [userEligibility, setUserEligibility] = useState<
+    "Orb" | "Device" | "All"
+  >("All");
   const [error, setError] = useState<string | null>(null);
 
   const { isConnected, connect } = useWallet();
@@ -484,6 +489,7 @@ function FormSetupPage({
       description,
       startDate,
       endDate,
+      userEligibility,
     });
   };
 
@@ -617,6 +623,32 @@ function FormSetupPage({
             </div>
           </div>
 
+          {/* User Eligibility */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Who can participate? *
+            </label>
+            <select
+              value={userEligibility}
+              onChange={(e) =>
+                setUserEligibility(e.target.value as "Orb" | "Device" | "All")
+              }
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+            >
+              <option value="All">All users (Device or Orb verified)</option>
+              <option value="Device">Device verified only</option>
+              <option value="Orb">Orb verified only</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {userEligibility === "All" &&
+                "Anyone with World ID (Device or Orb verification) can participate"}
+              {userEligibility === "Device" &&
+                "Only users with Device-level World ID verification can participate"}
+              {userEligibility === "Orb" &&
+                "Only users with Orb-level World ID verification can participate"}
+            </p>
+          </div>
+
           {/* Form will be public info */}
           <div className="p-4 bg-blue-50 rounded-lg">
             <div className="flex items-center space-x-2">
@@ -662,6 +694,7 @@ function PaymentStepPage({
     description: string;
     startDate: string;
     endDate: string;
+    userEligibility: "Orb" | "Device" | "All";
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -703,6 +736,7 @@ function PaymentStepPage({
         visibility: "Public", // Always public
         rewardPerQuestion: payment.rewardPerQuestion,
         rewardToken: payment.token,
+        userEligibility: formData.userEligibility,
         questions: questions.map((q) => ({
           id: q.id,
           title: q.title,
