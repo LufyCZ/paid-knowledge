@@ -61,10 +61,14 @@ export function useForms() {
     };
   };
 
-  const extractLocationFromDescription = (description: string | null): string | undefined => {
+  const extractLocationFromDescription = (
+    description: string | null
+  ): string | undefined => {
     if (!description) return undefined;
     // Simple regex to extract location patterns (can be improved)
-    const locationMatch = description.match(/(?:in|at|near)\s+([A-Z][a-zA-Z\s]+)/);
+    const locationMatch = description.match(
+      /(?:in|at|near)\s+([A-Z][a-zA-Z\s]+)/
+    );
     return locationMatch ? locationMatch[1].trim() : undefined;
   };
 
@@ -77,10 +81,13 @@ export function useForms() {
   const determineCategory = (form: BountyForm): string => {
     const name = form.name.toLowerCase();
     const description = form.description?.toLowerCase() || "";
-    
-    if (name.includes("photo") || description.includes("photo")) return "Photography";
-    if (name.includes("survey") || description.includes("survey")) return "Research";
-    if (name.includes("review") || description.includes("feedback")) return "Reviews";
+
+    if (name.includes("photo") || description.includes("photo"))
+      return "Photography";
+    if (name.includes("survey") || description.includes("survey"))
+      return "Research";
+    if (name.includes("review") || description.includes("feedback"))
+      return "Reviews";
     return "General";
   };
 
@@ -90,22 +97,22 @@ export function useForms() {
       setError(null);
 
       // Fetch forms from Walrus API
-      const response = await fetch('/api/forms');
+      const response = await fetch("/api/forms");
       if (!response.ok) {
         throw new Error(`Failed to fetch forms: ${response.statusText}`);
       }
 
       const data = await response.json();
       const forms: BountyForm[] = data.forms || [];
-      
+
       // Transform and filter forms
       const transformedForms = forms.map(transformForm);
-      const activeForms = transformedForms.filter(form => 
-        new Date(form.endDate) > new Date()
+      const activeForms = transformedForms.filter(
+        (form) => new Date(form.endDate) > new Date()
       );
 
       setAllForms(activeForms);
-      setFeaturedForms(activeForms.filter(form => form.featured));
+      setFeaturedForms(activeForms.filter((form) => form.featured));
     } catch (err) {
       console.error("Error fetching forms:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch forms");

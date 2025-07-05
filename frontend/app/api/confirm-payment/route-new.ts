@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MiniAppPaymentSuccessPayload } from "@worldcoin/minikit-js";
-import { getPaymentReference, updatePaymentStatus } from "@/lib/walrus-payments";
+import {
+  getPaymentReference,
+  updatePaymentStatus,
+} from "@/lib/walrus-payments";
 import { updateFormStatus } from "@/lib/walrus-forms";
 
 interface IRequestPayload {
@@ -22,7 +25,11 @@ export async function POST(req: NextRequest) {
     const paymentResult = await getPaymentReference(payload.reference);
 
     if (!paymentResult.success || !paymentResult.paymentInitiation) {
-      console.error("Payment reference not found:", payload.reference, paymentResult.error);
+      console.error(
+        "Payment reference not found:",
+        payload.reference,
+        paymentResult.error
+      );
       return NextResponse.json(
         { success: false, error: "Payment reference not found" },
         { status: 404 }
@@ -55,7 +62,11 @@ export async function POST(req: NextRequest) {
       );
 
       if (!response.ok) {
-        console.error("Worldcoin API error:", response.status, response.statusText);
+        console.error(
+          "Worldcoin API error:",
+          response.status,
+          response.statusText
+        );
         return NextResponse.json(
           { success: false, error: "Failed to verify transaction" },
           { status: 400 }
@@ -96,8 +107,11 @@ export async function POST(req: NextRequest) {
 
       // 5. If there's a form associated, activate it
       if (paymentRef.form_id) {
-        const formUpdateResult = await updateFormStatus(paymentRef.form_id, "active");
-        
+        const formUpdateResult = await updateFormStatus(
+          paymentRef.form_id,
+          "active"
+        );
+
         if (!formUpdateResult.success) {
           console.error("Failed to activate form:", formUpdateResult.error);
           // Continue anyway, payment is confirmed

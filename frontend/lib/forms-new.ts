@@ -1,10 +1,10 @@
 // Forms service migrated to use Walrus storage exclusively
 // This file now imports from walrus-forms.ts
-export * from './walrus-forms';
+export * from "./walrus-forms";
 
 // Legacy exports for backward compatibility
-import * as WalrusForms from './walrus-forms';
-import type { BountyForm } from './types';
+import * as WalrusForms from "./walrus-forms";
+import type { BountyForm } from "./types";
 
 export interface CreateFormData {
   name: string;
@@ -30,28 +30,28 @@ export interface CreateFormData {
   };
 }
 
-// Legacy function wrappers for backward compatibility
-export async function createBountyForm(formData: CreateFormData) {
+// Legacy function wrapper for backward compatibility
+export async function createForm(formData: CreateFormData) {
   return WalrusForms.createBountyForm(formData);
 }
 
-export async function getBountyForms() {
+export async function getForms() {
   return WalrusForms.getBountyForms();
 }
 
-export async function getBountyForm(id: string) {
+export async function getForm(id: string) {
   return WalrusForms.getBountyForm(id);
 }
 
-export async function updateBountyForm(id: string, data: any) {
+export async function updateForm(id: string, data: any) {
   return WalrusForms.updateFormStatus(id, data.status);
 }
 
-export async function getFormResponses(formId: string) {
+export async function getResponses(formId: string) {
   return WalrusForms.getFormResponses(formId);
 }
 
-export async function submitFormResponse(formId: string, answers: any[]) {
+export async function submitResponse(formId: string, answers: any[]) {
   // Transform answers into the expected format
   const submissionData = {
     formId,
@@ -59,29 +59,4 @@ export async function submitFormResponse(formId: string, answers: any[]) {
     userWallet: null, // Will be set by the API
   };
   return WalrusForms.submitFormResponse(submissionData);
-}
-
-// Additional legacy exports
-export async function createForm(formData: CreateFormData) {
-  return createBountyForm(formData);
-}
-
-export async function getForms() {
-  return getBountyForms();
-}
-
-export async function getForm(id: string) {
-  return getBountyForm(id);
-}
-
-export async function updateForm(id: string, data: any) {
-  return updateBountyForm(id, data);
-}
-
-export async function getResponses(formId: string) {
-  return getFormResponses(formId);
-}
-
-export async function submitResponse(formId: string, answers: any[]) {
-  return submitFormResponse(formId, answers);
 }

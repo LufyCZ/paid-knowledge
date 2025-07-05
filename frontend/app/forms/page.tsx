@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getBountyForms } from "@/lib/forms";
-import { BountyForm } from "@/lib/supabase";
+import { BountyForm } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
 export default function FormsListPage() {

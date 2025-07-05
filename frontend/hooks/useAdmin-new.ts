@@ -12,7 +12,7 @@ export const useAdminForms = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/forms?admin=true');
+      const response = await fetch("/api/forms?admin=true");
       if (!response.ok) {
         throw new Error(`Failed to fetch forms: ${response.statusText}`);
       }
@@ -36,15 +36,17 @@ export const useAdminForms = () => {
     try {
       const promises = formIds.map(async (id) => {
         const response = await fetch(`/api/forms/${id}`, {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ status }),
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to update form ${id}: ${response.statusText}`);
+          throw new Error(
+            `Failed to update form ${id}: ${response.statusText}`
+          );
         }
 
         return response.json();
@@ -65,7 +67,7 @@ export const useAdminForms = () => {
 
     try {
       const response = await fetch(`/api/forms/${formId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
@@ -86,9 +88,9 @@ export const useAdminForms = () => {
 
     try {
       const response = await fetch(`/api/forms/${formId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ featured }),
       });
@@ -131,7 +133,7 @@ export const useAdminUsers = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/profile?admin=true');
+      const response = await fetch("/api/profile?admin=true");
       if (!response.ok) {
         throw new Error(`Failed to fetch users: ${response.statusText}`);
       }
@@ -153,10 +155,10 @@ export const useAdminUsers = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
+      const response = await fetch("/api/profile", {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           user_id: userId,
@@ -207,12 +209,12 @@ export const useAdminAnalytics = () => {
     try {
       // Fetch analytics from multiple endpoints
       const [formsRes, usersRes] = await Promise.all([
-        fetch('/api/forms?admin=true'),
-        fetch('/api/profile?admin=true'),
+        fetch("/api/forms?admin=true"),
+        fetch("/api/profile?admin=true"),
       ]);
 
       if (!formsRes.ok || !usersRes.ok) {
-        throw new Error('Failed to fetch analytics data');
+        throw new Error("Failed to fetch analytics data");
       }
 
       const [formsData, usersData] = await Promise.all([
@@ -240,7 +242,9 @@ export const useAdminAnalytics = () => {
         totalRewards,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch analytics");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch analytics"
+      );
     } finally {
       setLoading(false);
     }

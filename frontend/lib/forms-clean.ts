@@ -1,10 +1,10 @@
 // Forms service migrated to use Walrus storage exclusively
 // This file now imports from walrus-forms.ts
-export * from './walrus-forms';
+export * from "./walrus-forms";
 
 // Legacy exports for backward compatibility
-import * as WalrusForms from './walrus-forms';
-import type { BountyForm } from './types';
+import * as WalrusForms from "./walrus-forms";
+import type { BountyForm } from "./types";
 
 export interface CreateFormData {
   name: string;

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { getBountyForm, submitFormResponse } from "@/lib/forms";
 import { useWallet } from "@/hooks/useWallet";
-import { BountyForm, FormQuestion } from "@/lib/supabase";
+import { BountyForm, FormQuestion } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
 interface FormData {

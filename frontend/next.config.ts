@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Allow cross-origin requests from ngrok for development
+  allowedDevOrigins: [
+    "*.ngrok-free.app",
+    "*.ngrok.io",
+    "localhost",
+    "127.0.0.1",
+  ],
   serverExternalPackages: [
     "@mysten/walrus",
     "@mysten/walrus-wasm",
@@ -35,7 +42,7 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     resolveExtensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json"],
-  }
+  },
 };
 
 export default nextConfig;

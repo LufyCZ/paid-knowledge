@@ -12,49 +12,6 @@ interface UseProfileReturn {
   updateProfile: (updates: Partial<UserProfile>) => Promise<boolean>;
 }
 
-// Utility functions for verification checking
-export const isVerified = (profile: UserProfile | null): boolean => {
-  if (!profile) return false;
-  return (
-    profile.verification_level !== "unverified" &&
-    profile.verification_level !== null
-  );
-};
-
-export const canVerifyAt = (
-  profile: UserProfile | null,
-  level: "Device" | "Orb"
-): boolean => {
-  if (!profile) return true; // New users can verify at any level
-
-  if (level === "Device") {
-    return !profile.eligibility_device; // Can verify if not already device verified
-  }
-
-  if (level === "Orb") {
-    return !profile.eligibility_orb; // Can verify if not already orb verified
-  }
-
-  return false;
-};
-
-export const getVerificationLevel = (
-  profile: UserProfile | null
-): "None" | "Device" | "Orb" => {
-  if (!profile || !profile.verification_level) return "None";
-
-  // Map the stored verification level to the expected format
-  switch (profile.verification_level) {
-    case "device":
-      return "Device";
-    case "orb":
-      return "Orb";
-    case "unverified":
-    default:
-      return "None";
-  }
-};
-
 export const useProfile = (): UseProfileReturn => {
   const { address: walletAddress, isConnected } = useWallet();
   const [profile, setProfile] = useState<UserProfile | null>(null);

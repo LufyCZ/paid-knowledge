@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getUserProfile, updateUserProfile } from "@/lib/walrus-users";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,111 +13,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get or create user profile
-    let { data: profile, error: profileError } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("wallet_address", walletAddress.toLowerCase())
-      .single();
+    const result = await getUserProfile(walletAddress);
 
-    if (profileError && profileError.code !== "PGRST116") {
-      // PGRST116 is "not found" - other errors are actual problems
-      console.error("Error fetching profile:", profileError);
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Failed to fetch profile" },
+        { error: result.error || "Failed to fetch profile" },
         { status: 500 }
       );
     }
 
-    // If profile doesn't exist, create it
-    if (!profile) {
-      const { data: newProfile, error: createError } = await supabase
-        .from("user_profiles")
-        .insert({
-          wallet_address: walletAddress.toLowerCase(),
-          verification_level: "None",
-          notifications_enabled: true,
-          total_rewards_earned: 0,
-          total_rewards_usdc: 0,
-          total_rewards_wld: 0,
-          forms_created_count: 0,
-          forms_submitted_count: 0,
-          forms_accepted_count: 0,
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error("Error creating profile:", createError);
-        return NextResponse.json(
-          { error: "Failed to create profile" },
-          { status: 500 }
-        );
-      }
-
-      profile = newProfile;
-    }
-
-    // Get verification history
-    const { data: verificationLogs, error: logsError } = await supabase
-      .from("verification_logs")
-      .select("*")
-      .eq("wallet_address", walletAddress.toLowerCase())
-      .order("verified_at", { ascending: false });
-
-    if (logsError) {
-      console.error("Error fetching verification logs:", logsError);
-      // Don't fail the request, just log the error
-    }
-
-    // Get additional stats from other tables
-    const [
-      { count: formsCreated },
-      { count: formsSubmitted },
-      { count: formsAccepted },
-    ] = await Promise.all([
-      supabase
-        .from("bounty_forms")
-        .select("*", { count: "exact", head: true })
-        .eq("creator_id", walletAddress.toLowerCase()),
-
-      supabase
-        .from("form_responses")
-        .select("*", { count: "exact", head: true })
-        .eq("wallet_address", walletAddress.toLowerCase()),
-
-      supabase
-        .from("form_responses")
-        .select("*", { count: "exact", head: true })
-        .eq("wallet_address", walletAddress.toLowerCase())
-        .eq("status", "approved"),
-    ]);
-
-    // Update the counts in the profile if they've changed
-    if (
-      profile.forms_created_count !== (formsCreated || 0) ||
-      profile.forms_submitted_count !== (formsSubmitted || 0) ||
-      profile.forms_accepted_count !== (formsAccepted || 0)
-    ) {
-      const { data: updatedProfile } = await supabase
-        .from("user_profiles")
-        .update({
-          forms_created_count: formsCreated || 0,
-          forms_submitted_count: formsSubmitted || 0,
-          forms_accepted_count: formsAccepted || 0,
-        })
-        .eq("wallet_address", walletAddress.toLowerCase())
-        .select()
-        .single();
-
-      if (updatedProfile) {
-        profile = updatedProfile;
-      }
-    }
-
     return NextResponse.json({
-      profile,
-      verificationHistory: verificationLogs || [],
+      profile: result.profile,
+      verificationHistory: result.verificationLogs,
     });
   } catch (error) {
     console.error("Profile API error:", error);
@@ -140,26 +47,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update user profile
-    const { data: updatedProfile, error } = await supabase
-      .from("user_profiles")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("wallet_address", walletAddress.toLowerCase())
-      .select()
-      .single();
+    const result = await updateUserProfile(walletAddress, updates);
 
-    if (error) {
-      console.error("Error updating profile:", error);
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Failed to update profile" },
+        { error: result.error || "Failed to update profile" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ profile: updatedProfile });
+    // Get updated profile
+    const profileResult = await getUserProfile(walletAddress);
+
+    return NextResponse.json({
+      profile: profileResult.success ? profileResult.profile : null,
+    });
   } catch (error) {
     console.error("Profile update API error:", error);
     return NextResponse.json(
