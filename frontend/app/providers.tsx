@@ -72,6 +72,16 @@ function ConnectionManager() {
   return null;
 }
 
+function getBaseUrl() {
+  if (typeof window !== "undefined") return ""; // ✨ browser → relative path
+
+  if (process.env.VERCEL_URL)
+    // Vercel
+    return `https://${process.env.VERCEL_URL}`;
+
+  return `http://localhost:${process.env.PORT ?? 3000}`; // dev / other hosts
+}
+
 // ---- Provider Wrapper ----
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
@@ -79,7 +89,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     createTRPCClient<AppRouter>({
       links: [
         httpBatchLink({
-          url: "http://localhost:2022",
+          url: `${getBaseUrl()}`,
         }),
       ],
     })
