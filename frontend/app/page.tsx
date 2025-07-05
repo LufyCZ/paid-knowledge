@@ -5,7 +5,6 @@ import Location from "../components/Location";
 import Link from "next/link";
 
 export default function Home() {
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-16">
@@ -17,8 +16,15 @@ export default function Home() {
             </h1>
           </div>
 
-          {/* Mebu */}
-          <div className="mb-8 flex justify-center items-center">
+          {/* Menu */}
+          <div className="mb-8 flex flex-wrap justify-center items-center gap-4">
+            <Link
+              href="/forms"
+              className="inline-block bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
+            >
+              📝 Browse Forms
+            </Link>
+
             <Link
               href="/form-builder"
               className="inline-block bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
@@ -28,7 +34,7 @@ export default function Home() {
 
             <Link
               href="/payment-test"
-              className="ml-4 inline-block bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
+              className="inline-block bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
             >
               🛠️ Payment Test
             </Link>

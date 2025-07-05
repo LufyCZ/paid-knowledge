@@ -1,3 +1,4 @@
+import * as z from "zod";
 import { supabase } from "./supabase";
 
 export interface CreateFormData {
@@ -15,6 +16,12 @@ export interface CreateFormData {
     type: string;
     options?: string[];
   }[];
+  // Optional payment data for funded forms
+  paymentData?: {
+    amount: number;
+    transactionId: string;
+    maxQuestions: number;
+  };
 }
 
 export async function createBountyForm(formData: CreateFormData) {
@@ -30,7 +37,7 @@ export async function createBountyForm(formData: CreateFormData) {
         visibility: formData.visibility,
         reward_per_question: formData.rewardPerQuestion,
         reward_token: formData.rewardToken,
-        status: "draft",
+        status: formData.paymentData ? "active" : "draft", // Active if funded, draft otherwise
       })
       .select()
       .single();
@@ -60,6 +67,29 @@ export async function createBountyForm(formData: CreateFormData) {
       // Rollback: delete the form if questions failed
       await supabase.from("bounty_forms").delete().eq("id", form.id);
       throw new Error("Failed to create questions");
+    }
+
+    // 3. If payment data provided, store payment reference
+    if (formData.paymentData) {
+      const { error: paymentError } = await supabase
+        .from("payment_references")
+        .insert({
+          reference_id: formData.paymentData.transactionId,
+          transaction_id: formData.paymentData.transactionId,
+          status: "confirmed",
+          form_id: form.id,
+          metadata: {
+            amount: formData.paymentData.amount,
+            maxQuestions: formData.paymentData.maxQuestions,
+            purpose: "form_funding",
+          },
+          confirmed_at: new Date().toISOString(),
+        });
+
+      if (paymentError) {
+        console.error("Error storing payment reference:", paymentError);
+        // Don't fail form creation, just log the error
+      }
     }
 
     return {
@@ -182,20 +212,18 @@ export async function updateFormStatus(
     };
   }
 }
-import * as z from 'zod'
-
 export const textFormEntrySchema = z.object({
-  type: z.literal('text'),
+  type: z.literal("text"),
   id: z.string(),
   label: z.string(),
   min: z.number().optional(),
   max: z.number().optional(),
   placeholder: z.string().optional(),
   required: z.boolean().optional(),
-})
+});
 
 export const numberFormEntrySchema = z.object({
-  type: z.literal('number'),
+  type: z.literal("number"),
   id: z.string(),
   label: z.string(),
   placeholder: z.string().optional(),
@@ -203,15 +231,96 @@ export const numberFormEntrySchema = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   integer: z.boolean().optional(),
-})
+});
 
 export const imageFormEntrySchema = z.object({
-  type: z.literal('image'),
+  type: z.literal("image"),
   id: z.string(),
   label: z.string(),
   min: z.number(),
   max: z.number(),
-})
+});
 
-export const formEntrySchema = z.discriminatedUnion('type', [textFormEntrySchema, numberFormEntrySchema, imageFormEntrySchema])
-export const formSchema = z.array(formEntrySchema)
+export const formEntrySchema = z.discriminatedUnion("type", [
+  textFormEntrySchema,
+  numberFormEntrySchema,
+  imageFormEntrySchema,
+]);
+export const formSchema = z.array(formEntrySchema);
+
+// Form submission types
+export interface FormSubmissionData {
+  formId: string;
+  walletAddress?: string;
+  answers: {
+    questionId: string;
+    answerText?: string;
+    answerOptions?: string[];
+    fileUrl?: string;
+  }[];
+}
+
+export async function submitFormResponse(submissionData: FormSubmissionData) {
+  try {
+    // 1. Get form details to calculate reward
+    const formResult = await getBountyForm(submissionData.formId);
+    if (!formResult.success || !formResult.data) {
+      throw new Error("Form not found");
+    }
+
+    const form = formResult.data;
+    const totalReward =
+      form.reward_per_question * submissionData.answers.length;
+
+    // 2. Create form response
+    const { data: response, error: responseError } = await supabase
+      .from("form_responses")
+      .insert({
+        form_id: submissionData.formId,
+        wallet_address: submissionData.walletAddress,
+        total_reward: totalReward,
+        reward_token: form.reward_token,
+        status: "pending",
+      })
+      .select()
+      .single();
+
+    if (responseError) {
+      console.error("Error creating response:", responseError);
+      throw new Error("Failed to create form response");
+    }
+
+    // 3. Insert answers
+    const answersToInsert = submissionData.answers.map((answer) => ({
+      response_id: response.id,
+      question_id: answer.questionId,
+      answer_text: answer.answerText || null,
+      answer_options: answer.answerOptions || null,
+      file_url: answer.fileUrl || null,
+    }));
+
+    const { error: answersError } = await supabase
+      .from("question_answers")
+      .insert(answersToInsert);
+
+    if (answersError) {
+      console.error("Error inserting answers:", answersError);
+      throw new Error("Failed to save answers");
+    }
+
+    return {
+      data: {
+        responseId: response.id,
+        totalReward,
+        rewardToken: form.reward_token,
+      },
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in submitFormResponse:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
