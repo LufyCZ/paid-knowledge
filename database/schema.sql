@@ -25,7 +25,7 @@ CREATE TABLE bounty_forms (
   visibility visibility_type NOT NULL DEFAULT 'Public',
   reward_per_question DECIMAL(10,2) NOT NULL CHECK (reward_per_question >= 0),
   reward_token reward_token_type NOT NULL DEFAULT 'USDC',
-  creator_id UUID, -- For future user authentication
+  creator_id VARCHAR(100), -- Wallet address of the quest creator
   status form_status_type NOT NULL DEFAULT 'draft',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

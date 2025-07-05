@@ -14,6 +14,7 @@ import { MiniKit } from "@worldcoin/minikit-js";
 import { Button } from "@/components/ui/button";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { ClientOnly } from "@/components/ClientOnly";
+import { QuestManagement } from "@/components/QuestManagement";
 import Link from "next/link";
 
 export default function AccountPage() {
@@ -525,6 +526,20 @@ export default function AccountPage() {
                     </Button>
                   </Link>
                 </div>
+              </div>
+
+              {/* Quest Management Card */}
+              <div className="bg-white rounded-xl shadow-sm border p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                    My Quests
+                  </h2>
+                  <p className="text-gray-600">
+                    Manage the quests you've created and review submissions
+                  </p>
+                </div>
+
+                <QuestManagement walletAddress={address} />
               </div>
             </div>
           )}

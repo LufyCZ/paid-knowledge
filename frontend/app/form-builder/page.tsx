@@ -783,7 +783,7 @@ function PaymentStepPage({
   const [showPaymentModal, setShowPaymentModal] = useState(true);
 
   const router = useRouter();
-  const { isConnected } = useWallet();
+  const { isConnected, address } = useWallet();
 
   // Get quest data from localStorage or previous step
   React.useEffect(() => {
@@ -824,6 +824,7 @@ function PaymentStepPage({
         rewardPerQuestion: payment.rewardPerQuestion,
         rewardToken: payment.token,
         userEligibility: formData.userEligibility,
+        creatorWalletAddress: address ?? undefined, // Add creator wallet address
         questions: questions.map((q) => ({
           id: q.id,
           title: q.title,

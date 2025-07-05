@@ -10,6 +10,7 @@ export interface CreateFormData {
   rewardPerQuestion: number;
   rewardToken: "USDC" | "WLD";
   userEligibility?: "Orb" | "Device" | "All";
+  creatorWalletAddress?: string; // Add creator wallet address
   questions: {
     id: number;
     title: string;
@@ -39,6 +40,7 @@ export async function createBountyForm(formData: CreateFormData) {
         reward_per_question: formData.rewardPerQuestion,
         reward_token: formData.rewardToken,
         user_eligibility: formData.userEligibility || "All",
+        creator_id: formData.creatorWalletAddress?.toLowerCase() || null,
         status: formData.paymentData ? "active" : "draft", // Active if funded, draft otherwise
       })
       .select()
@@ -320,6 +322,228 @@ export async function submitFormResponse(submissionData: FormSubmissionData) {
     };
   } catch (error) {
     console.error("Error in submitFormResponse:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+// Get forms created by a specific user (by wallet address)
+export async function getUserCreatedForms(
+  walletAddress: string,
+  limit = 10,
+  offset = 0
+) {
+  try {
+    const { data, error } = await supabase
+      .from("bounty_forms")
+      .select(
+        `
+        *,
+        form_questions (
+          id,
+          title,
+          type,
+          order_index
+        )
+      `
+      )
+      .eq("creator_id", walletAddress.toLowerCase())
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error("Error fetching user created forms:", error);
+      throw new Error("Failed to fetch user created forms");
+    }
+
+    return {
+      data,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in getUserCreatedForms:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+// Get responses for a specific form (for form creators to manage)
+export async function getFormResponses(
+  formId: string,
+  status?: "pending" | "approved" | "rejected" | "paid"
+) {
+  try {
+    let query = supabase
+      .from("form_responses")
+      .select(
+        `
+        *,
+        question_answers (
+          id,
+          question_id,
+          answer_text,
+          answer_options,
+          file_url,
+          form_questions!inner (
+            title,
+            type,
+            order_index
+          )
+        )
+      `
+      )
+      .eq("form_id", formId)
+      .order("submitted_at", { ascending: false });
+
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching form responses:", error);
+      throw new Error("Failed to fetch form responses");
+    }
+
+    return {
+      data,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in getFormResponses:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+// Update response status (approve/reject)
+export async function updateResponseStatus(
+  responseId: string,
+  status: "approved" | "rejected" | "paid",
+  walletAddress?: string
+) {
+  try {
+    // First verify that the user owns the form this response belongs to
+    if (walletAddress) {
+      const { data: response, error: responseError } = await supabase
+        .from("form_responses")
+        .select(
+          `
+          form_id,
+          bounty_forms!inner (
+            creator_id
+          )
+        `
+        )
+        .eq("id", responseId)
+        .single();
+
+      if (responseError) {
+        throw new Error("Response not found");
+      }
+
+      if (
+        (response as any).bounty_forms.creator_id !==
+        walletAddress.toLowerCase()
+      ) {
+        throw new Error(
+          "Unauthorized: You can only manage responses to your own forms"
+        );
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("form_responses")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", responseId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating response status:", error);
+      throw new Error("Failed to update response status");
+    }
+
+    return {
+      data,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in updateResponseStatus:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+// Bulk approve multiple responses
+export async function bulkApproveResponses(
+  responseIds: string[],
+  walletAddress?: string
+) {
+  try {
+    // Verify ownership for all responses if wallet address provided
+    if (walletAddress) {
+      const { data: responses, error: responseError } = await supabase
+        .from("form_responses")
+        .select(
+          `
+          id,
+          bounty_forms!inner (
+            creator_id
+          )
+        `
+        )
+        .in("id", responseIds);
+
+      if (responseError) {
+        throw new Error("Failed to verify response ownership");
+      }
+
+      const unauthorizedResponses = responses.filter(
+        (response) =>
+          (response as any).bounty_forms.creator_id !==
+          walletAddress.toLowerCase()
+      );
+
+      if (unauthorizedResponses.length > 0) {
+        throw new Error(
+          "Unauthorized: You can only manage responses to your own forms"
+        );
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("form_responses")
+      .update({
+        status: "approved",
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", responseIds)
+      .select();
+
+    if (error) {
+      console.error("Error bulk approving responses:", error);
+      throw new Error("Failed to bulk approve responses");
+    }
+
+    return {
+      data,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in bulkApproveResponses:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",
