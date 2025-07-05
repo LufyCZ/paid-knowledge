@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MiniKit } from "@worldcoin/minikit-js";
+import { MiniKit, RequestPermissionPayload, Permission } from "@worldcoin/minikit-js";
 import { useMiniKit } from "../app/providers";
 
 interface WalletState {
@@ -141,11 +141,22 @@ export const useWallet = () => {
     }
   }, [installed]);
 
+  const requestNotificationPermission = async () => {
+    const requestPermissionPayload: RequestPermissionPayload = {
+      permission: Permission.Notifications,
+    };
+    const { finalPayload } = await MiniKit.commandsAsync.requestPermission(requestPermissionPayload);
+    if (finalPayload.status === "success") {
+      // submit to BE
+    }
+  }
+
   return {
     ...state,
     connect,
     disconnect,
     reset,
+    requestNotificationPermission,
     isReady: installed,
   };
 };
