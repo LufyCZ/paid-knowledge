@@ -147,7 +147,17 @@ export const useWallet = () => {
     };
     const { finalPayload } = await MiniKit.commandsAsync.requestPermission(requestPermissionPayload);
     if (finalPayload.status === "success") {
-      // submit to BE
+      const response = await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: state.address }),
+      });
+      if (response.ok) {
+        const { success } = await response.json();
+        if (success) {
+          console.log("Notifications enabled");
+        }
+      }
     }
   }
 
