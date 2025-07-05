@@ -6,6 +6,7 @@ import { useWallet } from "../../hooks/useWallet";
 import { PaymentModal } from "../../components/PaymentModal";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { usePhoto } from "@/hooks/usePhoto";
 
 const QUESTION_TYPES = [
   { name: "Short Text", icon: "📝", description: "Brief text response" },
@@ -37,6 +38,8 @@ export default function FormBuilder() {
   const [insertIndex, setInsertIndex] = useState<number | undefined>(undefined);
   const [showQuestSetup, setShowQuestSetup] = useState(false);
   const [showPaymentStep, setShowPaymentStep] = useState(false);
+
+  const { setPhoto } = usePhoto();
 
   const openTypeMenu = (index?: number) => {
     setInsertIndex(index);
@@ -139,20 +142,30 @@ export default function FormBuilder() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border opacity-60 cursor-not-allowed">
-              <div className="flex items-center space-x-4">
-                <div className="text-4xl">📸</div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Photo</h3>
-                  <p className="text-gray-600 text-sm">
-                    Create photo collection tasks and challenges
-                  </p>
-                  <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full mt-2">
-                    Coming Soon
-                  </span>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              id="photo-input"
+              onChange={(e) => setPhoto(e.target.files?.[0]!)}
+            />
+            <label
+              htmlFor="photo-input"
+              className="bg-black"
+            >
+              <div className="bg-white rounded-xl p-6 shadow-sm border">
+                <div className="flex items-center space-x-4">
+                  <div className="text-4xl">📸</div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Photo</h3>
+                    <p className="text-gray-600 text-sm">
+                      Create photo collection tasks and challenges
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </label>
           </div>
         </div>
       </div>
@@ -370,22 +383,20 @@ function QuestionCard({
               <button
                 onClick={onMoveUp}
                 disabled={index === 0}
-                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${
-                  index === 0
-                    ? "text-gray-300 cursor-not-allowed bg-gray-100"
-                    : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
-                } transition-all duration-150 touch-manipulation`}
+                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${index === 0
+                  ? "text-gray-300 cursor-not-allowed bg-gray-100"
+                  : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
+                  } transition-all duration-150 touch-manipulation`}
               >
                 ↑
               </button>
               <button
                 onClick={onMoveDown}
                 disabled={index === totalQuestions - 1}
-                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${
-                  index === totalQuestions - 1
-                    ? "text-gray-300 cursor-not-allowed bg-gray-100"
-                    : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
-                } transition-all duration-150 touch-manipulation`}
+                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${index === totalQuestions - 1
+                  ? "text-gray-300 cursor-not-allowed bg-gray-100"
+                  : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
+                  } transition-all duration-150 touch-manipulation`}
               >
                 ↓
               </button>
@@ -441,11 +452,11 @@ function QuestionCard({
           "Checkbox",
           "Picture Choice",
         ].includes(question.type) && (
-          <ChoiceOptionEditor
-            options={question.options || []}
-            onChange={(opts) => updateOptions(question.id, opts)}
-          />
-        )}
+            <ChoiceOptionEditor
+              options={question.options || []}
+              onChange={(opts) => updateOptions(question.id, opts)}
+            />
+          )}
 
         <button
           onClick={onAddQuestion}
@@ -842,10 +853,8 @@ function PaymentStepPage({
 
         // Redirect directly to success page
         router.push(
-          `/form-success?name=${encodeURIComponent(formData.name)}&amount=${
-            payment.amount
-          }&token=${payment.token}&questions=${payment.maxQuestions}&txId=${
-            payment.transactionId
+          `/form-success?name=${encodeURIComponent(formData.name)}&amount=${payment.amount
+          }&token=${payment.token}&questions=${payment.maxQuestions}&txId=${payment.transactionId
           }`
         );
       } else {
