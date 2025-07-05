@@ -1,4 +1,4 @@
-import { supabase, BountyForm, FormQuestion } from "./supabase";
+import { supabase } from "./supabase";
 
 export interface CreateFormData {
   name: string;
@@ -182,3 +182,36 @@ export async function updateFormStatus(
     };
   }
 }
+import * as z from 'zod'
+
+export const textFormEntrySchema = z.object({
+  type: z.literal('text'),
+  id: z.string(),
+  label: z.string(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  placeholder: z.string().optional(),
+  required: z.boolean().optional(),
+})
+
+export const numberFormEntrySchema = z.object({
+  type: z.literal('number'),
+  id: z.string(),
+  label: z.string(),
+  placeholder: z.string().optional(),
+  required: z.boolean().optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  integer: z.boolean().optional(),
+})
+
+export const imageFormEntrySchema = z.object({
+  type: z.literal('image'),
+  id: z.string(),
+  label: z.string(),
+  min: z.number(),
+  max: z.number(),
+})
+
+export const formEntrySchema = z.discriminatedUnion('type', [textFormEntrySchema, numberFormEntrySchema, imageFormEntrySchema])
+export const formSchema = z.array(formEntrySchema)
