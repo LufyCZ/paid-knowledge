@@ -3,7 +3,7 @@
 import { useLocation } from "@/hooks/useLocation";
 import VerifyWrapper from "../components/VerifyWrapper";
 import WalletWrapper from "../components/WalletWrapper";
-import Webcam from "react-webcam";
+import Camera from "../components/Camera";
 import Link from "next/link";
 
 export default function Home() {
@@ -79,20 +79,7 @@ export default function Home() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 text-center">
               Camera Feed
             </h3>
-            <div className="flex justify-center">
-              <Webcam
-                audio={false}
-                height={240}
-                screenshotFormat="image/jpeg"
-                width={320}
-                videoConstraints={{
-                  width: 320,
-                  height: 240,
-                  facingMode: "environment",
-                }}
-                className="rounded-lg"
-              />
-            </div>
+            <Camera />
           </div>
         </div>
       </div>
