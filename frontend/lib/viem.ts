@@ -17,6 +17,17 @@ export const bountyManagerAddress = "0x" as const
 
 export const bountyManagerAbi = [
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_usdc",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
     "inputs": [],
     "name": "BountyDoesNotExist",
     "type": "error"
@@ -24,6 +35,16 @@ export const bountyManagerAbi = [
   {
     "inputs": [],
     "name": "BountyHasExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BountyHasNoValueLeft",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BountyHashAlreadyExists",
     "type": "error"
   },
   {
@@ -43,27 +64,18 @@ export const bountyManagerAbi = [
   },
   {
     "inputs": [],
+    "name": "InvalidCurrency",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "OnlyBountyOwner",
     "type": "error"
   },
   {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes",
-        "name": "bountyId",
-        "type": "bytes"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "BountyClosed",
-    "type": "event"
+    "inputs": [],
+    "name": "ZeroAddressNotAllowed",
+    "type": "error"
   },
   {
     "anonymous": false,
@@ -110,6 +122,31 @@ export const bountyManagerAbi = [
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes",
+        "name": "bountyId",
+        "type": "bytes"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "BountyPaidOut",
+    "type": "event"
+  },
+  {
     "inputs": [
       {
         "internalType": "bytes",
@@ -128,6 +165,21 @@ export const bountyManagerAbi = [
         "internalType": "address",
         "name": "owner",
         "type": "address"
+      },
+      {
+        "internalType": "enum BountyManager.Currency",
+        "name": "currency",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "perProofValue",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalValueLeft",
+        "type": "uint256"
       },
       {
         "internalType": "uint256",
@@ -186,9 +238,39 @@ export const bountyManagerAbi = [
         "internalType": "bytes",
         "name": "bountyId",
         "type": "bytes"
+      },
+      {
+        "internalType": "address",
+        "name": "bountyOwner",
+        "type": "address"
+      },
+      {
+        "internalType": "enum BountyManager.Currency",
+        "name": "currency",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "perProofValue",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalValueLeft",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "expirationDate",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "dataHash",
+        "type": "bytes"
       }
     ],
-    "name": "closeBounty",
+    "name": "createBounty",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -197,18 +279,19 @@ export const bountyManagerAbi = [
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "bountyId",
+        "name": "",
         "type": "bytes"
-      },
-      {
-        "internalType": "uint256",
-        "name": "expirationDate",
-        "type": "uint256"
       }
     ],
-    "name": "createBounty",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "name": "dataHashToBountyId",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -285,6 +368,21 @@ export const bountyManagerAbi = [
             "type": "address"
           },
           {
+            "internalType": "enum BountyManager.Currency",
+            "name": "currency",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "perProofValue",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalValueLeft",
+            "type": "uint256"
+          },
+          {
             "internalType": "uint256",
             "name": "expirationDate",
             "type": "uint256"
@@ -353,5 +451,58 @@ export const bountyManagerAbi = [
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "bountyId",
+        "type": "bytes"
+      },
+      {
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      }
+    ],
+    "name": "payoutBounty",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes[]",
+        "name": "bountyIds",
+        "type": "bytes[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "recipients",
+        "type": "address[]"
+      }
+    ],
+    "name": "payoutBountyBatch",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "usdc",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
   }
 ] as const

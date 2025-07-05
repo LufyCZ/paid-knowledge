@@ -20,12 +20,6 @@ export const answerCreate = publicProcedure.input(z.object({ answer: answerSchem
     throw new Error("You have already answered this question");
   }
 
-  // Check if the contract has enough funds to pay for the answer
-  // TODO: az bude kontrakt :D
-  if (false) {
-    throw new Error("Not enough funds to pay for the answer");
-  }
-
   const file = new TextEncoder().encode(JSON.stringify(input.answer));
   const blob = await ctx.walrusClient.writeBlob({
     blob: file,

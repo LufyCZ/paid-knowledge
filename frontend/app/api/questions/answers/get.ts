@@ -4,7 +4,6 @@ import { createContext, publicProcedure } from '../../trpc';
 import z from 'zod';
 import { answerSchema } from '@/lib/answers';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
-import { Hex } from 'viem';
 
 function handler(req: Request) {
   return fetchRequestHandler({
@@ -17,9 +16,11 @@ function handler(req: Request) {
 
 export const answersGet = publicProcedure.input(z.object({ questionId: z.string() })).query(async ({ ctx, input }) => {
   // Read the question's answers' blob ids from the contract
-
-
-  const blobIds: string[] = []
+  const blobIds = await client.readContract({
+    address: bountyManagerAddress,
+    abi: bountyManagerAbi,
+    functionName: 'getAllOpenBounties',
+  }).then((result) => result.map((id) => Buffer.from(id, 'hex').toString()))
 
   const answers = await Promise.allSettled(
     blobIds.map(async (blobId) => {

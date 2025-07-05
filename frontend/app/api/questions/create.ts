@@ -3,9 +3,8 @@ import { appRouter } from '..';
 import { createContext, publicProcedure } from '../trpc';
 import { hashQuestion, questionSchema } from '@/lib/questions';
 import z from 'zod';
-import { MiniAppPaymentSuccessPayload } from '@worldcoin/minikit-js'
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
-import { Hex, maxUint256 } from 'viem';
+import { Address, Hex, maxUint256 } from 'viem';
 
 function handler(req: Request) {
   return fetchRequestHandler({
@@ -23,7 +22,12 @@ if (!appId || !apiKey) {
   throw new Error("Missing Worldcoin configuration");
 }
 
-function getPayment(transactionId: string): Promise<MiniAppPaymentSuccessPayload> {
+const tokenMap = {
+  'WLD': 0,
+  'USDCE': 1
+}
+
+async function getPayment(transactionId: string): Promise<{ inputToken: string, inputTokenAmount: string, fromWalletAddress: Address, recipientAddress: Address, reference: string, transactionStatus: 'pending' | 'success' | 'failed' }> {
   return fetch(
     `https://developer.worldcoin.org/api/v2/minikit/transaction/${transactionId}?app_id=${appId}`,
     {
@@ -49,7 +53,7 @@ export const questionCreate = publicProcedure
       throw new Error("Payment not found");
     }
 
-    if (payment.status !== "success") {
+    if (payment.transactionStatus !== "success") {
       throw new Error("Payment not successful");
     }
 
@@ -58,7 +62,16 @@ export const questionCreate = publicProcedure
     }
 
     // Check if the question already exists
-    // TODO: az bude kontrakt :D
+    const existingQuestion = await client.readContract({
+      address: bountyManagerAddress,
+      abi: bountyManagerAbi,
+      functionName: 'dataHashToBountyId',
+      args: [Buffer.from(formHash, 'utf-8').toString("hex") as Hex],
+    }).catch(() => null);
+
+    if (existingQuestion) {
+      throw new Error("Question already exists");
+    }
 
     // Write the whole question to walrus
     const file = new TextEncoder().encode(JSON.stringify(input));
@@ -69,12 +82,18 @@ export const questionCreate = publicProcedure
       signer: ctx.walrusSigner,
     })
 
+    const paymentToken = tokenMap[payment.inputToken as keyof typeof tokenMap];
+    if (!paymentToken) {
+      throw new Error("Unsupported payment token");
+    }
+    const amountPerAnswer = BigInt(input.question.reward?.amount || 0);
+
     // Write the question to WorldChain
     const txHash = await client.writeContract({
       address: bountyManagerAddress,
       abi: bountyManagerAbi,
       functionName: 'createBounty',
-      args: [Buffer.from(blob.blobId, 'utf-8').toString("hex") as Hex, maxUint256],
+      args: [Buffer.from(blob.blobId, 'utf-8').toString("hex") as Hex, payment.fromWalletAddress, paymentToken, amountPerAnswer, BigInt(payment.inputTokenAmount), maxUint256, Buffer.from(formHash, 'utf-8').toString("hex") as Hex],
     })
 
     return {
