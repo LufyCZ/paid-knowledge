@@ -190,4 +190,6 @@ contract BountyManager {
             }
         }
     }
+
+    receive() external payable {}
 }
