@@ -11,7 +11,7 @@ export default function Camera() {
                 {photo && <img src={photo} alt="photo" className="rounded-lg" />}
                 {!photo && !isCameraOpen && <p className="text-gray-600 dark:text-gray-400">Loading camera...</p>}
                 <Webcam
-                    className={`rounded-lg ${photo ? "hidden" : "block"} ${isCameraOpen ? "block" : "hidden"}`}
+                    className={`rounded-lg`}
                     ref={webcamRef}
                     audio={false}
                     height={240}
