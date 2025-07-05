@@ -14,6 +14,8 @@ contract BountyManager {
     error BountyHasNoValueLeft();
     error InvalidCurrency();
     error BountyHashAlreadyExists();
+    error AnswerIdAlreadyExists();
+    error AnswerIdDoesNotExist();
 
     event BountyCreated(
         bytes indexed bountyId,
@@ -43,9 +45,15 @@ contract BountyManager {
         bool isActive;
     }
 
+    struct AnswerData {
+        bytes answerId;
+        address answerer;
+    }
+
     mapping(address => bytes[]) public bountyOwnerToBounties;
     mapping(bytes => BountyData) public bountiesToBountyData;
     mapping(bytes => bytes) public dataHashToBountyId;
+    mapping(bytes => AnswerData[]) public bountyIdToAnswers;
     address public usdc;
 
     // THIS IS NOT PRODUCTION READY, WE USED THIS AS A FORM OF ONCHAIN INDEXING
@@ -76,7 +84,7 @@ contract BountyManager {
         uint256 totalValueLeft,
         uint256 expirationDate,
         bytes memory dataHash
-    ) public {
+    ) external {
         if (bountyId.length == 0) revert BountyIdEmpty();
         if (bountyOwner == address(0)) revert ZeroAddressNotAllowed();
         if (expirationDate <= block.timestamp) revert ExpirationDateInPast();
@@ -104,13 +112,40 @@ contract BountyManager {
         emit BountyCreated(bountyId, bountyOwner, expirationDate);
     }
 
+    function answerBounty(
+        bytes memory bountyId,
+        bytes memory answerId,
+        address answerer
+    ) external {
+        if (bountiesToBountyData[bountyId].owner == address(0)) revert BountyDoesNotExist();
+        if (bountiesToBountyData[bountyId].expirationDate < block.timestamp) revert BountyHasExpired();
+
+        for (uint256 i = 0; i < bountyIdToAnswers[bountyId].length; i++) {
+            if (keccak256(bountyIdToAnswers[bountyId][i].answerId) == keccak256(answerId)) {
+                revert AnswerIdAlreadyExists();
+            }
+        }
+
+        bountyIdToAnswers[bountyId].push(AnswerData({answerId: answerId, answerer: answerer}));
+    }
+
     function payoutBounty(
         bytes memory bountyId,
-        address recipient
+        bytes memory answerId
     ) public bountyExists(bountyId) onlyBountyOwner(bountyId) {
         BountyData storage bounty = bountiesToBountyData[bountyId];
         if (bounty.totalValueLeft < bounty.perProofValue) revert BountyHasNoValueLeft();
         if (bounty.expirationDate < block.timestamp) revert BountyHasExpired();
+
+        address recipient;
+        for (uint256 i = 0; i < bountyIdToAnswers[bountyId].length; i++) {
+            if (keccak256(bountyIdToAnswers[bountyId][i].answerId) == keccak256(answerId)) {
+                recipient = bountyIdToAnswers[bountyId][i].answerer;
+                break;
+            }
+        }
+
+        if (recipient == address(0)) revert AnswerIdDoesNotExist();
 
         bounty.totalValueLeft -= bounty.perProofValue;
 
@@ -127,10 +162,10 @@ contract BountyManager {
 
     function payoutBountyBatch(
         bytes[] memory bountyIds,
-        address[] memory recipients
-    ) public {
+        bytes[] memory answerIds
+    ) external {
         for (uint256 i = 0; i < bountyIds.length; i++) {
-            payoutBounty(bountyIds[i], recipients[i]);
+            payoutBounty(bountyIds[i], answerIds[i]);
         }
     }
 

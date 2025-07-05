@@ -188,8 +188,72 @@ describe("BountyManager", function () {
         });
     });
 
+    describe("answerBounty", function () {
+        const bountyId = ethersInstance.toUtf8Bytes("test-bounty-1");
+        const answerId = ethersInstance.toUtf8Bytes("test-answer-1");
+        let futureTimestamp: number;
+
+        beforeEach(async function () {
+            futureTimestamp = await getFutureTimestamp();
+        });
+
+        it("Should answer bounty successfully", async function () {
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+
+            await expect(bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address))
+                .to.not.be.reverted;
+        });
+
+        it("Should revert when bounty does not exist", async function () {
+            const nonExistentBountyId = ethersInstance.toUtf8Bytes("non-existent");
+
+            await expect(
+                bountyManager.connect(user2).answerBounty(nonExistentBountyId, answerId, user2.address)
+            ).to.be.revertedWithCustomError(bountyManager, "BountyDoesNotExist");
+        });
+
+        it("Should revert when bounty has expired", async function () {
+            const currentBlock = await ethersInstance.provider.getBlock("latest");
+            const shortFutureTimestamp = currentBlock!.timestamp + 30;
+
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp, getDataHash(bountyId));
+
+            await ethersInstance.provider.send("evm_increaseTime", [35]);
+            await ethersInstance.provider.send("evm_mine", []);
+
+            await expect(
+                bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address)
+            ).to.be.revertedWithCustomError(bountyManager, "BountyHasExpired");
+        });
+
+        it("Should revert when answerId already exists", async function () {
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+
+            await bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address);
+
+            await expect(
+                bountyManager.connect(user3).answerBounty(bountyId, answerId, user3.address)
+            ).to.be.revertedWithCustomError(bountyManager, "AnswerIdAlreadyExists");
+        });
+
+        it("Should allow multiple different answers to same bounty", async function () {
+            const answerId2 = ethersInstance.toUtf8Bytes("test-answer-2");
+            const answerId3 = ethersInstance.toUtf8Bytes("test-answer-3");
+
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+
+            await expect(bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address))
+                .to.not.be.reverted;
+            await expect(bountyManager.connect(user3).answerBounty(bountyId, answerId2, user3.address))
+                .to.not.be.reverted;
+            await expect(bountyManager.connect(user1).answerBounty(bountyId, answerId3, user1.address))
+                .to.not.be.reverted;
+        });
+    });
+
     describe("payoutBounty", function () {
         const bountyId = ethersInstance.toUtf8Bytes("test-bounty-1");
+        const answerId = ethersInstance.toUtf8Bytes("test-answer-1");
         let futureTimestamp: number;
 
         beforeEach(async function () {
@@ -207,9 +271,11 @@ describe("BountyManager", function () {
                 value: totalValue
             });
 
+            await bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address);
+
             const initialBalance = await ethersInstance.provider.getBalance(user2.address);
 
-            await expect(bountyManager.connect(user1).payoutBounty(bountyId, user2.address))
+            await expect(bountyManager.connect(user1).payoutBounty(bountyId, answerId))
                 .to.emit(bountyManager, "BountyPaidOut");
 
             const finalBalance = await ethersInstance.provider.getBalance(user2.address);
@@ -229,9 +295,11 @@ describe("BountyManager", function () {
 
             await mockUSDC.mint(bountyManager.target, totalValue);
 
+            await bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address);
+
             const initialBalance = await mockUSDC.balanceOf(user2.address);
 
-            await expect(bountyManager.connect(user1).payoutBounty(bountyId, user2.address))
+            await expect(bountyManager.connect(user1).payoutBounty(bountyId, answerId))
                 .to.emit(bountyManager, "BountyPaidOut");
 
             const finalBalance = await mockUSDC.balanceOf(user2.address);
@@ -253,8 +321,18 @@ describe("BountyManager", function () {
             const nonExistentBountyId = ethersInstance.toUtf8Bytes("non-existent");
 
             await expect(
-                bountyManager.connect(user1).payoutBounty(nonExistentBountyId, user2.address)
+                bountyManager.connect(user1).payoutBounty(nonExistentBountyId, answerId)
             ).to.be.revertedWithCustomError(bountyManager, "BountyDoesNotExist");
+        });
+
+        it("Should revert when answerId does not exist", async function () {
+            const nonExistentAnswerId = ethersInstance.toUtf8Bytes("non-existent-answer");
+
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+
+            await expect(
+                bountyManager.connect(user1).payoutBounty(bountyId, nonExistentAnswerId)
+            ).to.be.revertedWithCustomError(bountyManager, "AnswerIdDoesNotExist");
         });
 
         it("Should revert when bounty has expired", async function () {
@@ -263,11 +341,13 @@ describe("BountyManager", function () {
 
             await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp, getDataHash(bountyId));
 
+            await bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address);
+
             await ethersInstance.provider.send("evm_increaseTime", [35]);
             await ethersInstance.provider.send("evm_mine", []);
 
             await expect(
-                bountyManager.connect(user1).payoutBounty(bountyId, user2.address)
+                bountyManager.connect(user1).payoutBounty(bountyId, answerId)
             ).to.be.revertedWithCustomError(bountyManager, "BountyHasExpired");
         });
 
@@ -277,14 +357,18 @@ describe("BountyManager", function () {
 
             await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId));
 
+            await bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address);
+
             await expect(
-                bountyManager.connect(user1).payoutBounty(bountyId, user2.address)
+                bountyManager.connect(user1).payoutBounty(bountyId, answerId)
             ).to.be.revertedWithCustomError(bountyManager, "BountyHasNoValueLeft");
         });
 
         it("Should allow multiple payouts until value is depleted", async function () {
             const perProofValue = ethersInstance.parseEther("0.1");
             const totalValue = ethersInstance.parseEther("0.25");
+            const answerId2 = ethersInstance.toUtf8Bytes("test-answer-2");
+            const answerId3 = ethersInstance.toUtf8Bytes("test-answer-3");
 
             await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId));
 
@@ -293,16 +377,20 @@ describe("BountyManager", function () {
                 value: totalValue
             });
 
-            await bountyManager.connect(user1).payoutBounty(bountyId, user2.address);
+            await bountyManager.connect(user2).answerBounty(bountyId, answerId, user2.address);
+            await bountyManager.connect(user3).answerBounty(bountyId, answerId2, user3.address);
+            await bountyManager.connect(user1).answerBounty(bountyId, answerId3, user1.address);
+
+            await bountyManager.connect(user1).payoutBounty(bountyId, answerId);
             let bountyData = await bountyManager.bountiesToBountyData(bountyId);
             expect(bountyData.totalValueLeft).to.equal(ethersInstance.parseEther("0.15"));
 
-            await bountyManager.connect(user1).payoutBounty(bountyId, user3.address);
+            await bountyManager.connect(user1).payoutBounty(bountyId, answerId2);
             bountyData = await bountyManager.bountiesToBountyData(bountyId);
             expect(bountyData.totalValueLeft).to.equal(ethersInstance.parseEther("0.05"));
 
             await expect(
-                bountyManager.connect(user1).payoutBounty(bountyId, user2.address)
+                bountyManager.connect(user1).payoutBounty(bountyId, answerId3)
             ).to.be.revertedWithCustomError(bountyManager, "BountyHasNoValueLeft");
         });
     });
@@ -310,6 +398,8 @@ describe("BountyManager", function () {
     describe("payoutBountyBatch", function () {
         const bountyId1 = ethersInstance.toUtf8Bytes("test-bounty-1");
         const bountyId2 = ethersInstance.toUtf8Bytes("test-bounty-2");
+        const answerId1 = ethersInstance.toUtf8Bytes("test-answer-1");
+        const answerId2 = ethersInstance.toUtf8Bytes("test-answer-2");
         let futureTimestamp: number;
 
         beforeEach(async function () {
@@ -332,10 +422,13 @@ describe("BountyManager", function () {
                 value: totalValue
             });
 
+            await bountyManager.connect(user3).answerBounty(bountyId1, answerId1, user3.address);
+            await bountyManager.connect(user2).answerBounty(bountyId2, answerId2, user2.address);
+
             const initialBalance1 = await ethersInstance.provider.getBalance(user3.address);
             const initialBalance2 = await ethersInstance.provider.getBalance(user2.address);
 
-            await expect(bountyManager.connect(user1).payoutBountyBatch([bountyId1, bountyId2], [user3.address, user2.address]))
+            await expect(bountyManager.connect(user1).payoutBountyBatch([bountyId1, bountyId2], [answerId1, answerId2]))
                 .to.emit(bountyManager, "BountyPaidOut")
                 .to.emit(bountyManager, "BountyPaidOut");
 
@@ -350,7 +443,7 @@ describe("BountyManager", function () {
             await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId1));
 
             expect(
-                bountyManager.connect(user1).payoutBountyBatch([bountyId1], [user2.address, user3.address])
+                bountyManager.connect(user1).payoutBountyBatch([bountyId1], [answerId1, answerId2])
             ).to.be.reverted;
         });
     });
