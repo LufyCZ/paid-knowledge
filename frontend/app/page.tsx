@@ -4,6 +4,7 @@ import { useLocation } from "@/hooks/useLocation";
 import VerifyWrapper from "../components/VerifyWrapper";
 import WalletWrapper from "../components/WalletWrapper";
 import Webcam from "react-webcam";
+import Link from "next/link";
 
 export default function Home() {
   const location = useLocation();
@@ -17,6 +18,16 @@ export default function Home() {
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
               Paid Knowledge Platform
             </h1>
+          </div>
+
+          {/* Mebu */}
+          <div className="mb-8">
+            <Link
+              href="/form-builder"
+              className="inline-block bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
+            >
+              ➕ Create New Form
+            </Link>
           </div>
 
           {/* Authentication Section */}
