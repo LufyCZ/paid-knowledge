@@ -18,6 +18,10 @@ describe("BountyManager", function () {
         return currentBlock!.timestamp + secondsFromNow;
     }
 
+    function getDataHash(bountyId: Uint8Array): Uint8Array {
+        return ethersInstance.toUtf8Bytes(ethersInstance.keccak256(bountyId));
+    }
+
     beforeEach(async function () {
         [owner, user1, user2, user3] = await ethersInstance.getSigners();
 
@@ -47,7 +51,7 @@ describe("BountyManager", function () {
         });
 
         it("Should create a bounty successfully with WLD currency", async function () {
-            await expect(bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp))
+            await expect(bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId)))
                 .to.emit(bountyManager, "BountyCreated");
 
             const bountyData = await bountyManager.bountiesToBountyData(bountyId);
@@ -61,7 +65,7 @@ describe("BountyManager", function () {
         });
 
         it("Should create a bounty successfully with USDC currency", async function () {
-            await expect(bountyManager.connect(user1).createBounty(bountyId, user1.address, 1, 1000000, 10000000, futureTimestamp))
+            await expect(bountyManager.connect(user1).createBounty(bountyId, user1.address, 1, 1000000, 10000000, futureTimestamp, getDataHash(bountyId)))
                 .to.emit(bountyManager, "BountyCreated");
 
             const bountyData = await bountyManager.bountiesToBountyData(bountyId);
@@ -75,7 +79,7 @@ describe("BountyManager", function () {
         });
 
         it("Should create a bounty successfully with different bountyOwner", async function () {
-            await expect(bountyManager.connect(user1).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp))
+            await expect(bountyManager.connect(user1).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId)))
                 .to.emit(bountyManager, "BountyCreated");
 
             const bountyData = await bountyManager.bountiesToBountyData(bountyId);
@@ -86,21 +90,21 @@ describe("BountyManager", function () {
         });
 
         it("Should add bounty to specified owner's bounty list", async function () {
-            await bountyManager.connect(user1).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
 
             const userBounty = await bountyManager.bountyOwnerToBounties(user2.address, 0);
             expect(userBounty).to.equal(ethersInstance.hexlify(bountyId));
         });
 
         it("Should not add bounty to msg.sender's bounty list when bountyOwner is different", async function () {
-            await bountyManager.connect(user1).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
 
             const userBounties = await bountyManager.getBountiesByOwner(user1.address);
             expect(userBounties).to.have.length(0);
         });
 
         it("Should add bounty to open bounties list", async function () {
-            await bountyManager.connect(user1).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
 
             const openBounties = await bountyManager.openBountyIds(0);
             expect(openBounties).to.equal(ethersInstance.hexlify(bountyId));
@@ -110,7 +114,7 @@ describe("BountyManager", function () {
             const emptyBountyId = ethersInstance.toUtf8Bytes("");
 
             await expect(
-                bountyManager.connect(user1).createBounty(emptyBountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp)
+                bountyManager.connect(user1).createBounty(emptyBountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(emptyBountyId))
             ).to.be.revertedWithCustomError(bountyManager, "BountyIdEmpty");
         });
 
@@ -119,7 +123,7 @@ describe("BountyManager", function () {
             const pastTimestamp = currentBlock!.timestamp - 3600;
 
             await expect(
-                bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), pastTimestamp)
+                bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), pastTimestamp, getDataHash(bountyId))
             ).to.be.revertedWithCustomError(bountyManager, "ExpirationDateInPast");
         });
 
@@ -128,15 +132,15 @@ describe("BountyManager", function () {
             const currentTimestamp = currentBlock!.timestamp;
 
             await expect(
-                bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), currentTimestamp)
+                bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), currentTimestamp, getDataHash(bountyId))
             ).to.be.revertedWithCustomError(bountyManager, "ExpirationDateInPast");
         });
 
         it("Should revert when bountyId already exists", async function () {
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
 
             await expect(
-                bountyManager.connect(user2).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp + 3600)
+                bountyManager.connect(user2).createBounty(bountyId, user2.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp + 3600, getDataHash(bountyId))
             ).to.be.revertedWithCustomError(bountyManager, "BountyIdAlreadyExists");
         });
 
@@ -144,8 +148,8 @@ describe("BountyManager", function () {
             const bountyId2 = ethersInstance.toUtf8Bytes("test-bounty-2");
             const futureTimestamp2 = await getFutureTimestamp(7200);
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
-            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
 
             const userBounty1 = await bountyManager.bountyOwnerToBounties(user1.address, 0);
             const userBounty2 = await bountyManager.bountyOwnerToBounties(user1.address, 1);
@@ -157,8 +161,8 @@ describe("BountyManager", function () {
             const bountyId2 = ethersInstance.toUtf8Bytes("test-bounty-2");
             const futureTimestamp2 = await getFutureTimestamp(7200);
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
-            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp2);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
 
             const user1Bounty = await bountyManager.bountyOwnerToBounties(user1.address, 0);
             const user2Bounty = await bountyManager.bountyOwnerToBounties(user2.address, 0);
@@ -168,8 +172,19 @@ describe("BountyManager", function () {
 
         it("Should revert when bountyOwner is zero address", async function () {
             await expect(
-                bountyManager.connect(user1).createBounty(bountyId, ethersInstance.ZeroAddress, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp)
+                bountyManager.connect(user1).createBounty(bountyId, ethersInstance.ZeroAddress, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId))
             ).to.be.revertedWithCustomError(bountyManager, "ZeroAddressNotAllowed");
+        });
+
+        it("Should revert when dataHash already exists", async function () {
+            const bountyId2 = ethersInstance.toUtf8Bytes("test-bounty-2");
+            const sameDataHash = getDataHash(bountyId);
+
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, sameDataHash);
+
+            await expect(
+                bountyManager.connect(user2).createBounty(bountyId2, user2.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp + 3600, sameDataHash)
+            ).to.be.revertedWithCustomError(bountyManager, "BountyHashAlreadyExists");
         });
     });
 
@@ -185,7 +200,7 @@ describe("BountyManager", function () {
             const perProofValue = ethersInstance.parseEther("0.1");
             const totalValue = ethersInstance.parseEther("1");
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId));
 
             await user1.sendTransaction({
                 to: bountyManager.target,
@@ -210,7 +225,7 @@ describe("BountyManager", function () {
 
             console.log("bountyId", ethersInstance.hexlify(bountyId));
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 1, perProofValue, totalValue, futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 1, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId));
 
             await mockUSDC.mint(bountyManager.target, totalValue);
 
@@ -227,7 +242,7 @@ describe("BountyManager", function () {
         });
 
         it("Should revert when called by non-owner", async function () {
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
 
             await expect(
                 bountyManager.connect(user2).payoutBounty(bountyId, user2.address)
@@ -246,7 +261,7 @@ describe("BountyManager", function () {
             const currentBlock = await ethersInstance.provider.getBlock("latest");
             const shortFutureTimestamp = currentBlock!.timestamp + 30;
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp, getDataHash(bountyId));
 
             await ethersInstance.provider.send("evm_increaseTime", [35]);
             await ethersInstance.provider.send("evm_mine", []);
@@ -260,7 +275,7 @@ describe("BountyManager", function () {
             const perProofValue = ethersInstance.parseEther("0.1");
             const totalValue = ethersInstance.parseEther("0.05");
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId));
 
             await expect(
                 bountyManager.connect(user1).payoutBounty(bountyId, user2.address)
@@ -271,7 +286,7 @@ describe("BountyManager", function () {
             const perProofValue = ethersInstance.parseEther("0.1");
             const totalValue = ethersInstance.parseEther("0.25");
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId));
 
             await user1.sendTransaction({
                 to: bountyManager.target,
@@ -305,8 +320,8 @@ describe("BountyManager", function () {
             const perProofValue = ethersInstance.parseEther("0.1");
             const totalValue = ethersInstance.parseEther("1");
 
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, perProofValue, totalValue, futureTimestamp);
-            await bountyManager.connect(user2).createBounty(bountyId2, user1.address, 0, perProofValue, totalValue, futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId1));
+            await bountyManager.connect(user2).createBounty(bountyId2, user1.address, 0, perProofValue, totalValue, futureTimestamp, getDataHash(bountyId2));
 
             await user1.sendTransaction({
                 to: bountyManager.target,
@@ -332,7 +347,7 @@ describe("BountyManager", function () {
         });
 
         it("Should revert when arrays have different lengths", async function () {
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId1));
 
             expect(
                 bountyManager.connect(user1).payoutBountyBatch([bountyId1], [user2.address, user3.address])
@@ -354,9 +369,9 @@ describe("BountyManager", function () {
             const futureTimestamp2 = await getFutureTimestamp(7200);
             const futureTimestamp3 = await getFutureTimestamp(10800);
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
-            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2);
-            await bountyManager.connect(user1).createBounty(bountyId3, user1.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp3);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
+            await bountyManager.connect(user1).createBounty(bountyId3, user1.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp3, getDataHash(bountyId3));
 
             const userBounty1 = await bountyManager.bountyOwnerToBounties(user1.address, 0);
             const userBounty2 = await bountyManager.bountyOwnerToBounties(user1.address, 1);
@@ -372,9 +387,9 @@ describe("BountyManager", function () {
             const futureTimestamp2 = await getFutureTimestamp(7200);
             const futureTimestamp3 = await getFutureTimestamp(10800);
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
-            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2);
-            await bountyManager.connect(user1).createBounty(bountyId3, user1.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp3);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
+            await bountyManager.connect(user1).createBounty(bountyId3, user1.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp3, getDataHash(bountyId3));
 
             let openBounty1 = await bountyManager.openBountyIds(0);
             let openBounty2 = await bountyManager.openBountyIds(1);
@@ -392,7 +407,7 @@ describe("BountyManager", function () {
             const futureTimestamp = await getFutureTimestamp();
 
             await expect(
-                bountyManager.connect(user1).createBounty(longBountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp)
+                bountyManager.connect(user1).createBounty(longBountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(longBountyId))
             ).to.emit(bountyManager, "BountyCreated");
         });
 
@@ -401,7 +416,7 @@ describe("BountyManager", function () {
             const futureTimestamp = await getFutureTimestamp();
 
             await expect(
-                bountyManager.connect(user1).createBounty(specialBountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp)
+                bountyManager.connect(user1).createBounty(specialBountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(specialBountyId))
             ).to.emit(bountyManager, "BountyCreated");
         });
 
@@ -410,7 +425,7 @@ describe("BountyManager", function () {
             const maxTimestamp = ethersInstance.MaxUint256;
 
             await expect(
-                bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), maxTimestamp)
+                bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), maxTimestamp, getDataHash(bountyId))
             ).to.emit(bountyManager, "BountyCreated");
         });
     });
@@ -434,9 +449,9 @@ describe("BountyManager", function () {
             const futureTimestamp2 = await getFutureTimestamp(7200);
             const futureTimestamp3 = await getFutureTimestamp(10800);
 
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
-            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2);
-            await bountyManager.connect(user1).createBounty(bountyId3, user1.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp3);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId1));
+            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
+            await bountyManager.connect(user1).createBounty(bountyId3, user1.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp3, getDataHash(bountyId3));
 
             const bounties = await bountyManager.getBountiesByOwner(user1.address);
             expect(bounties).to.have.length(3);
@@ -465,9 +480,9 @@ describe("BountyManager", function () {
             const futureTimestamp2 = await getFutureTimestamp(7200);
             const futureTimestamp3 = await getFutureTimestamp(10800);
 
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
-            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp2);
-            await bountyManager.connect(user3).createBounty(bountyId3, user3.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp3);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId1));
+            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
+            await bountyManager.connect(user3).createBounty(bountyId3, user3.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp3, getDataHash(bountyId3));
 
             const openBounties = await bountyManager.getAllOpenBounties();
             expect(openBounties).to.have.length(3);
@@ -486,7 +501,7 @@ describe("BountyManager", function () {
         });
 
         it("Should return correct bounty data", async function () {
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
 
             const bountyData = await bountyManager.getBountyData(bountyId);
             expect(bountyData.bountyId).to.equal(ethersInstance.hexlify(bountyId));
@@ -519,7 +534,7 @@ describe("BountyManager", function () {
         it("Should return false for active bounty", async function () {
             const currentBlock = await ethersInstance.provider.getBlock("latest");
             const futureTimestamp = currentBlock!.timestamp + 3600;
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
 
             const isExpired = await bountyManager.isBountyExpired(bountyId);
             expect(isExpired).to.be.false;
@@ -529,7 +544,7 @@ describe("BountyManager", function () {
             const currentBlock = await ethersInstance.provider.getBlock("latest");
             const shortFutureTimestamp = currentBlock!.timestamp + 30;
 
-            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp, getDataHash(bountyId));
 
             await ethersInstance.provider.send("evm_increaseTime", [35]);
             await ethersInstance.provider.send("evm_mine", []);
@@ -556,8 +571,8 @@ describe("BountyManager", function () {
         it("Should return correct count of open bounties", async function () {
             const futureTimestamp2 = await getFutureTimestamp(7200);
 
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
-            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp2);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId1));
+            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
 
             const count = await bountyManager.getOpenBountyCount();
             expect(count).to.equal(2);
@@ -581,8 +596,8 @@ describe("BountyManager", function () {
         it("Should return correct count for owner", async function () {
             const futureTimestamp2 = await getFutureTimestamp(7200);
 
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp);
-            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId1));
+            await bountyManager.connect(user1).createBounty(bountyId2, user1.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
 
             const count = await bountyManager.getBountyCountByOwner(user1.address);
             expect(count).to.equal(2);
@@ -599,9 +614,9 @@ describe("BountyManager", function () {
             const futureTimestamp = currentBlock!.timestamp + 3600;
             const shortFutureTimestamp = currentBlock!.timestamp + 30;
 
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp);
-            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, shortFutureTimestamp);
-            await bountyManager.connect(user3).createBounty(bountyId3, user3.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp, getDataHash(bountyId1));
+            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, shortFutureTimestamp, getDataHash(bountyId2));
+            await bountyManager.connect(user3).createBounty(bountyId3, user3.address, 0, ethersInstance.parseEther("0.2"), ethersInstance.parseEther("2"), futureTimestamp, getDataHash(bountyId3));
 
             await ethersInstance.provider.send("evm_increaseTime", [35]);
             await ethersInstance.provider.send("evm_mine", []);
@@ -624,8 +639,8 @@ describe("BountyManager", function () {
             const futureTimestamp = currentBlock!.timestamp + 3600;
             const shortFutureTimestamp = currentBlock!.timestamp + 30;
 
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp);
-            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), shortFutureTimestamp, getDataHash(bountyId1));
+            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp, getDataHash(bountyId2));
 
             await ethersInstance.provider.send("evm_increaseTime", [35]);
             await ethersInstance.provider.send("evm_mine", []);
@@ -641,8 +656,8 @@ describe("BountyManager", function () {
             const futureTimestamp1 = await getFutureTimestamp();
             const futureTimestamp2 = await getFutureTimestamp(7200);
 
-            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp1);
-            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp2);
+            await bountyManager.connect(user1).createBounty(bountyId1, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp1, getDataHash(bountyId1));
+            await bountyManager.connect(user2).createBounty(bountyId2, user2.address, 1, 1000000, 10000000, futureTimestamp2, getDataHash(bountyId2));
 
             await bountyManager.cleanupExpiredBounties([bountyId1, bountyId2]);
 

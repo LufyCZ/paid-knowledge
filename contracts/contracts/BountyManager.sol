@@ -13,6 +13,7 @@ contract BountyManager {
     error ZeroAddressNotAllowed();
     error BountyHasNoValueLeft();
     error InvalidCurrency();
+    error BountyHashAlreadyExists();
 
     event BountyCreated(
         bytes indexed bountyId,
@@ -44,6 +45,7 @@ contract BountyManager {
 
     mapping(address => bytes[]) public bountyOwnerToBounties;
     mapping(bytes => BountyData) public bountiesToBountyData;
+    mapping(bytes => bytes) public dataHashToBountyId;
     address public usdc;
 
     // THIS IS NOT PRODUCTION READY, WE USED THIS AS A FORM OF ONCHAIN INDEXING
@@ -72,13 +74,16 @@ contract BountyManager {
         Currency currency,
         uint256 perProofValue,
         uint256 totalValueLeft,
-        uint256 expirationDate
+        uint256 expirationDate,
+        bytes memory dataHash
     ) public {
         if (bountyId.length == 0) revert BountyIdEmpty();
         if (bountyOwner == address(0)) revert ZeroAddressNotAllowed();
         if (expirationDate <= block.timestamp) revert ExpirationDateInPast();
         if (bountiesToBountyData[bountyId].owner != address(0))
             revert BountyIdAlreadyExists();
+        if (dataHashToBountyId[dataHash].length > 0)
+            revert BountyHashAlreadyExists();
 
         BountyData memory newBounty = BountyData({
             bountyId: bountyId,
@@ -92,6 +97,7 @@ contract BountyManager {
 
         bountyOwnerToBounties[bountyOwner].push(bountyId);
         bountiesToBountyData[bountyId] = newBounty;
+        dataHashToBountyId[dataHash] = bountyId;
 
         openBountyIds.push(bountyId);
 
