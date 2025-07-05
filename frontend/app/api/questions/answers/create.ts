@@ -1,19 +1,8 @@
-import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import { appRouter } from '../..';
-import { createContext, publicProcedure } from '../../trpc';
+import { publicProcedure } from '../../trpc';
 import z from 'zod';
 import { answerSchema } from '@/lib/answers';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
 import { Address, fromHex, toHex } from 'viem';
-
-function handler(req: Request) {
-  return fetchRequestHandler({
-    endpoint: '/api/questions/answers/create',
-    req,
-    router: appRouter,
-    createContext
-  });
-}
 
 export const answerCreate = publicProcedure.input(z.object({ answer: answerSchema })).query(async ({ ctx, input }) => {
   // Check if the user has already answered this question
@@ -57,6 +46,3 @@ export const answerCreate = publicProcedure.input(z.object({ answer: answerSchem
 
   return blob
 })
-
-
-export { handler as POST };

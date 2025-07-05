@@ -1,19 +1,8 @@
-import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import { appRouter } from '..';
-import { createContext, publicProcedure } from '../trpc';
 import { hashQuestion, questionSchema } from '@/lib/questions';
 import z from 'zod';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
 import { Address, maxUint256, toHex } from 'viem';
-
-function handler(req: Request) {
-  return fetchRequestHandler({
-    endpoint: '/api/questions/create',
-    req,
-    router: appRouter,
-    createContext
-  });
-}
+import { publicProcedure } from '../trpc';
 
 const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID;
 const apiKey = process.env.WORLDCOIN_DEV_PORTAL_API_KEY;
@@ -101,5 +90,3 @@ export const questionCreate = publicProcedure
       blobId: blob.blobId,
     }
   })
-
-export { handler as GET, handler as POST };

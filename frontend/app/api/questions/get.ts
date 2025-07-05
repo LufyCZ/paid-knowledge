@@ -1,19 +1,8 @@
-import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import { appRouter } from '..';
-import { createContext, publicProcedure } from '../trpc';
+import { publicProcedure } from '../trpc';
 import z from 'zod';
 import { questionSchema } from '@/lib/questions';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
 import { fromHex } from 'viem';
-
-function handler(req: Request) {
-  return fetchRequestHandler({
-    endpoint: '/api/questions/get',
-    req,
-    router: appRouter,
-    createContext
-  });
-}
 
 export const questionsGet = publicProcedure.query(async ({ ctx }) => {
   // Read blob ids from the contract
@@ -40,5 +29,3 @@ export const questionsGet = publicProcedure.query(async ({ ctx }) => {
   return successfulQuestions;
 })
 
-
-export { handler as GET };

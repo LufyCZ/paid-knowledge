@@ -89,7 +89,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     createTRPCClient<AppRouter>({
       links: [
         httpBatchLink({
-          url: `${getBaseUrl()}`,
+          url: `${getBaseUrl()}/api/trpc`,
         }),
       ],
     })
