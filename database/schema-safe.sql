@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS form_responses (
   submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   total_reward DECIMAL(10,2) NOT NULL,
   reward_token reward_token_type NOT NULL,
-  status response_status_type NOT NULL DEFAULT 'pending'
+  status response_status_type NOT NULL DEFAULT 'pending',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 4. Question Answers Table (individual answers within a response)
@@ -143,6 +144,12 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
+    CREATE INDEX idx_form_responses_updated_at ON form_responses(updated_at);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
     CREATE INDEX idx_question_answers_response ON question_answers(response_id);
 EXCEPTION
     WHEN duplicate_table THEN null;
@@ -184,6 +191,11 @@ CREATE TRIGGER update_bounty_forms_updated_at
 DROP TRIGGER IF EXISTS update_form_questions_updated_at ON form_questions;
 CREATE TRIGGER update_form_questions_updated_at 
   BEFORE UPDATE ON form_questions 
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_form_responses_updated_at ON form_responses;
+CREATE TRIGGER update_form_responses_updated_at 
+  BEFORE UPDATE ON form_responses 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_payment_references_updated_at ON payment_references;

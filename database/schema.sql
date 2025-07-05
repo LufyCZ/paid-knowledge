@@ -59,7 +59,8 @@ CREATE TABLE form_responses (
   submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   total_reward DECIMAL(10,2) NOT NULL,
   reward_token reward_token_type NOT NULL,
-  status response_status_type NOT NULL DEFAULT 'pending'
+  status response_status_type NOT NULL DEFAULT 'pending',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 4. Question Answers Table (individual answers within a response)
@@ -98,6 +99,7 @@ CREATE INDEX idx_bounty_forms_dates ON bounty_forms(start_date, end_date);
 CREATE INDEX idx_form_questions_form ON form_questions(form_id, order_index);
 CREATE INDEX idx_form_responses_form ON form_responses(form_id);
 CREATE INDEX idx_form_responses_wallet ON form_responses(wallet_address);
+CREATE INDEX idx_form_responses_updated_at ON form_responses(updated_at);
 CREATE INDEX idx_question_answers_response ON question_answers(response_id);
 CREATE INDEX idx_payment_references_ref ON payment_references(reference_id);
 CREATE INDEX idx_payment_references_status ON payment_references(status);
@@ -119,6 +121,10 @@ CREATE TRIGGER update_bounty_forms_updated_at
 
 CREATE TRIGGER update_form_questions_updated_at 
   BEFORE UPDATE ON form_questions 
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_form_responses_updated_at 
+  BEFORE UPDATE ON form_responses 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_payment_references_updated_at 
