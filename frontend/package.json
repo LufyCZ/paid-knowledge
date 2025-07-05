@@ -12,6 +12,7 @@
     "@mysten/sui": "^1.35.0",
     "@mysten/walrus": "^0.2.1",
     "@radix-ui/react-slot": "^1.2.3",
+    "@supabase/supabase-js": "^2.50.3",
     "@tanstack/react-form": "^1.12.4",
     "@tanstack/react-query": "^5.81.5",
     "@wagmi/core": "^2.17.3",

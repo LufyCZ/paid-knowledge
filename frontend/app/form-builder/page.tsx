@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { createBountyForm, CreateFormData } from "../../lib/forms";
 
 const QUESTION_TYPES = [
   { name: "Short Text", icon: "📝", description: "Brief text response" },
@@ -425,22 +426,53 @@ function FormSetupPage({
   const [visibility, setVisibility] = useState<"Public" | "Private">("Public");
   const [rewardPerQuestion, setRewardPerQuestion] = useState("");
   const [rewardToken, setRewardToken] = useState<"USDC" | "WLD">("USDC");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    const formData = {
-      name: formName,
-      description,
-      startDate,
-      endDate,
-      visibility,
-      rewardPerQuestion: parseFloat(rewardPerQuestion),
-      rewardToken,
-      questions,
-    };
+  const handleSave = async () => {
+    setIsLoading(true);
+    setError(null);
 
-    console.log("Saving complete form:", formData);
-    // TODO: Save to backend/blockchain
-    // TODO: Redirect to success page or form list
+    try {
+      const formData: CreateFormData = {
+        name: formName,
+        description,
+        startDate,
+        endDate,
+        visibility,
+        rewardPerQuestion: parseFloat(rewardPerQuestion),
+        rewardToken,
+        questions: questions.map((q) => ({
+          id: q.id,
+          title: q.title,
+          description: q.description,
+          type: q.type,
+          options: q.options,
+        })),
+      };
+
+      const result = await createBountyForm(formData);
+
+      if (result.success) {
+        console.log("Form created successfully:", result.form);
+
+        // Show success message and redirect or close modal
+        alert(`🎉 Form "${formData.name}" created successfully!`);
+
+        // Reset form and go back
+        onBack();
+
+        // TODO: Redirect to form management page or dashboard
+        // window.location.href = `/forms/${result.form.id}`;
+      } else {
+        setError(result.error || "Failed to create form");
+      }
+    } catch (err) {
+      console.error("Error creating form:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -486,6 +518,15 @@ function FormSetupPage({
         {/* Form Details */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
           <h3 className="text-lg font-semibold text-gray-900">Form Details</h3>
+
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <span className="text-red-600">❌</span>
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -626,10 +667,26 @@ function FormSetupPage({
         <div className="max-w-2xl mx-auto">
           <button
             onClick={handleSave}
-            disabled={!formName || !startDate || !endDate || !rewardPerQuestion}
-            className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
+            disabled={
+              !formName ||
+              !startDate ||
+              !endDate ||
+              !rewardPerQuestion ||
+              isLoading
+            }
+            className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation flex items-center justify-center space-x-2"
           >
-            🚀 Create Bounty Form
+            {isLoading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Creating Form...</span>
+              </>
+            ) : (
+              <>
+                <span>🚀</span>
+                <span>Create Bounty Form</span>
+              </>
+            )}
           </button>
         </div>
       </div>
