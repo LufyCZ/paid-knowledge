@@ -31,9 +31,22 @@ type Question = {
 
 type BuilderType = "survey" | "photo" | null;
 
+type PhotoTask = {
+  title: string;
+  description: string;
+  requirements: string;
+  location: string | null; // Optional location
+};
+
 export default function FormBuilder() {
   const [selectedType, setSelectedType] = useState<BuilderType>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [photoTask, setPhotoTask] = useState<PhotoTask>({
+    title: "",
+    description: "",
+    requirements: "",
+    location: null,
+  });
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [insertIndex, setInsertIndex] = useState<number | undefined>(undefined);
   const [showQuestSetup, setShowQuestSetup] = useState(false);
@@ -142,32 +155,208 @@ export default function FormBuilder() {
               </div>
             </div>
 
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              id="photo-input"
-              onChange={(e) => setPhoto(e.target.files?.[0]!)}
-            />
-            <label
-              htmlFor="photo-input"
-              className="bg-black"
+            <div
+              onClick={() => setSelectedType("photo")}
+              className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300"
             >
-              <div className="bg-white rounded-xl p-6 shadow-sm border">
-                <div className="flex items-center space-x-4">
-                  <div className="text-4xl">📸</div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Photo</h3>
-                    <p className="text-gray-600 text-sm">
-                      Create photo collection tasks and challenges
-                    </p>
-                  </div>
+              <div className="flex items-center space-x-4">
+                <div className="text-4xl">📸</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Photo</h3>
+                  <p className="text-gray-600 text-sm">
+                    Create photo collection tasks and challenges
+                  </p>
                 </div>
               </div>
-            </label>
+            </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // If photo type is selected, show photo task builder
+  if (selectedType === "photo") {
+    return (
+      <div className="min-h-screen bg-gray-50 relative">
+        {/* Header with back button */}
+        <div className="bg-white shadow-sm border-b px-4 py-3 sticky top-0 z-10">
+          <div className="flex items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="mr-4 flex items-center"
+              onClick={() => setSelectedType(null)}
+            >
+              ← Back
+            </Button>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Create Photo Task
+            </h1>
+          </div>
+        </div>
+
+        {/* Photo Task Builder */}
+        <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto pb-24">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="space-y-6">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter photo task title..."
+                  value={photoTask.title}
+                  onChange={(e) =>
+                    setPhotoTask((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description *
+                </label>
+                <textarea
+                  placeholder="Describe what kind of photo you want users to take..."
+                  value={photoTask.description}
+                  onChange={(e) =>
+                    setPhotoTask((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  rows={4}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
+                />
+              </div>
+
+              {/* Requirements */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Requirements *
+                </label>
+                <textarea
+                  placeholder="Specify any requirements for the photo (quality, angle, content, etc.)..."
+                  value={photoTask.requirements}
+                  onChange={(e) =>
+                    setPhotoTask((prev) => ({
+                      ...prev,
+                      requirements: e.target.value,
+                    }))
+                  }
+                  rows={3}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
+                />
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter location or leave empty for any location..."
+                  value={photoTask.location || ""}
+                  onChange={(e) =>
+                    setPhotoTask((prev) => ({
+                      ...prev,
+                      location: e.target.value.trim() || null,
+                    }))
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Users can submit photos from any location if left empty
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Photo Task Preview */}
+          {photoTask.title && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                <span className="mr-2">📸</span>
+                Photo Task Preview
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <span className="text-sm font-medium text-gray-600">
+                    Title:
+                  </span>
+                  <p className="text-gray-900">{photoTask.title}</p>
+                </div>
+                {photoTask.description && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">
+                      Description:
+                    </span>
+                    <p className="text-gray-900">{photoTask.description}</p>
+                  </div>
+                )}
+                {photoTask.requirements && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">
+                      Requirements:
+                    </span>
+                    <p className="text-gray-900">{photoTask.requirements}</p>
+                  </div>
+                )}
+                {photoTask.location && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">
+                      Location:
+                    </span>
+                    <p className="text-gray-900">{photoTask.location}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Continue Button */}
+        {photoTask.title && photoTask.description && photoTask.requirements && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-20">
+            <div className="max-w-2xl mx-auto">
+              <button
+                onClick={() => setShowQuestSetup(true)}
+                className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
+              >
+                Continue to Payment Setup
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Quest Setup Modal */}
+        {showQuestSetup && (
+          <PhotoQuestSetupPage
+            photoTask={photoTask}
+            onBack={() => setShowQuestSetup(false)}
+            onContinueToPayment={(formData) => {
+              setShowQuestSetup(false);
+              setShowPaymentStep(true);
+            }}
+          />
+        )}
+
+        {/* Payment Step */}
+        {showPaymentStep && (
+          <PhotoPaymentStepPage
+            photoTask={photoTask}
+            onBack={() => {
+              setShowPaymentStep(false);
+              setShowQuestSetup(true);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -323,7 +512,7 @@ export default function FormBuilder() {
       )}
 
       {/* Payment Step */}
-      {showPaymentStep && (
+      {showPaymentStep && selectedType === "survey" && (
         <PaymentStepPage
           questions={questions}
           onBack={() => {
@@ -383,20 +572,22 @@ function QuestionCard({
               <button
                 onClick={onMoveUp}
                 disabled={index === 0}
-                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${index === 0
-                  ? "text-gray-300 cursor-not-allowed bg-gray-100"
-                  : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
-                  } transition-all duration-150 touch-manipulation`}
+                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${
+                  index === 0
+                    ? "text-gray-300 cursor-not-allowed bg-gray-100"
+                    : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
+                } transition-all duration-150 touch-manipulation`}
               >
                 ↑
               </button>
               <button
                 onClick={onMoveDown}
                 disabled={index === totalQuestions - 1}
-                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${index === totalQuestions - 1
-                  ? "text-gray-300 cursor-not-allowed bg-gray-100"
-                  : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
-                  } transition-all duration-150 touch-manipulation`}
+                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${
+                  index === totalQuestions - 1
+                    ? "text-gray-300 cursor-not-allowed bg-gray-100"
+                    : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
+                } transition-all duration-150 touch-manipulation`}
               >
                 ↓
               </button>
@@ -452,11 +643,11 @@ function QuestionCard({
           "Checkbox",
           "Picture Choice",
         ].includes(question.type) && (
-            <ChoiceOptionEditor
-              options={question.options || []}
-              onChange={(opts) => updateOptions(question.id, opts)}
-            />
-          )}
+          <ChoiceOptionEditor
+            options={question.options || []}
+            onChange={(opts) => updateOptions(question.id, opts)}
+          />
+        )}
 
         <button
           onClick={onAddQuestion}
@@ -773,11 +964,256 @@ function QuestSetupPage({
   );
 }
 
-function PaymentStepPage({
-  questions,
+function PhotoQuestSetupPage({
+  photoTask,
+  onBack,
+  onContinueToPayment,
+}: {
+  photoTask: PhotoTask;
+  onBack: () => void;
+  onContinueToPayment: (formData: {
+    name: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+    userEligibility: "Orb" | "Device" | "All";
+  }) => void;
+}) {
+  const [formName, setFormName] = useState("");
+  const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [userEligibility, setUserEligibility] = useState<
+    "Orb" | "Device" | "All"
+  >("All");
+  const [error, setError] = useState<string | null>(null);
+
+  const { isConnected, connect } = useWallet();
+
+  const handleContinueToPayment = () => {
+    if (!isConnected) {
+      alert("Please connect your wallet first to proceed with payment.");
+      return;
+    }
+
+    if (!formName || !startDate || !endDate) {
+      setError(
+        "Please fill in all required fields before proceeding to payment."
+      );
+      return;
+    }
+
+    setError(null);
+
+    // Store photo task data for payment step
+    localStorage.setItem("pendingPhotoTask", JSON.stringify(photoTask));
+    localStorage.setItem(
+      "pendingFormData",
+      JSON.stringify({
+        name: formName,
+        description,
+        startDate,
+        endDate,
+        userEligibility,
+      })
+    );
+
+    onContinueToPayment({
+      name: formName,
+      description,
+      startDate,
+      endDate,
+      userEligibility,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b px-4 py-3 sticky top-0 z-10">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            ←
+          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Photo Quest Setup
+          </h1>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto pb-24">
+        {/* Photo Task Preview */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <h3 className="font-semibold text-gray-900 mb-2 flex items-center">
+            <span className="mr-2">📸</span>
+            Photo Task Preview
+          </h3>
+          <div className="space-y-2">
+            <div>
+              <span className="text-sm font-medium text-gray-600">Title:</span>
+              <p className="text-gray-900">{photoTask.title}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Description:
+              </span>
+              <p className="text-gray-900">{photoTask.description}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Requirements:
+              </span>
+              <p className="text-gray-900">{photoTask.requirements}</p>
+            </div>
+            {photoTask.location && (
+              <div>
+                <span className="text-sm font-medium text-gray-600">
+                  Location:
+                </span>
+                <p className="text-gray-900">{photoTask.location}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quest Details */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+          <h3 className="text-lg font-semibold text-gray-900">Quest Details</h3>
+
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <span className="text-red-600">❌</span>
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Wallet Connection Warning */}
+          {!isConnected && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-yellow-600">⚠️</span>
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">
+                      Wallet Required
+                    </p>
+                    <p className="text-xs text-yellow-700">
+                      Connect your wallet to fund the quest
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={connect} size="sm" className="ml-4">
+                  Connect Wallet
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quest Name *
+              </label>
+              <input
+                type="text"
+                placeholder="Enter a name for your photo quest..."
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quest Description (optional)
+              </label>
+              <textarea
+                placeholder="Add any additional context for participants..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Date *
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  End Date *
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || new Date().toISOString().split("T")[0]}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                User Eligibility
+              </label>
+              <select
+                value={userEligibility}
+                onChange={(e) =>
+                  setUserEligibility(e.target.value as "Orb" | "Device" | "All")
+                }
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              >
+                <option value="All">All Users</option>
+                <option value="Device">Device Verified Only</option>
+                <option value="Orb">Orb Verified Only</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Choose who can participate in your photo quest
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fixed Continue Button */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-20">
+        <div className="max-w-2xl mx-auto">
+          <button
+            onClick={handleContinueToPayment}
+            className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
+          >
+            Continue to Payment
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Photo Payment Step Page Component
+function PhotoPaymentStepPage({
+  photoTask,
   onBack,
 }: {
-  questions: Question[];
+  photoTask: PhotoTask;
   onBack: () => void;
 }) {
   const [formData, setFormData] = useState<{
@@ -794,7 +1230,7 @@ function PaymentStepPage({
   const router = useRouter();
   const { isConnected, address } = useWallet();
 
-  // Get quest data from localStorage or previous step
+  // Get quest data from localStorage
   React.useEffect(() => {
     const savedFormData = localStorage.getItem("pendingFormData");
     if (savedFormData) {
@@ -819,61 +1255,62 @@ function PaymentStepPage({
     }
 
     try {
+      // Create photo task form with special structure
+      const photoQuestionData = {
+        id: Date.now(),
+        title: photoTask.title,
+        description: `${photoTask.description}\n\nRequirements: ${
+          photoTask.requirements
+        }${photoTask.location ? `\n\nLocation: ${photoTask.location}` : ""}`,
+        type: "Picture Answer",
+        options: photoTask.location ? [photoTask.location] : undefined,
+      };
+
       const createFormData: CreateFormData = {
         name: formData.name,
         description: formData.description,
         startDate: formData.startDate,
         endDate: formData.endDate,
-        visibility: "Public", // Always public
+        visibility: "Public" as const,
         rewardPerQuestion: payment.rewardPerQuestion,
         rewardToken: payment.token,
         userEligibility: formData.userEligibility,
-        creatorWalletAddress: address ?? undefined, // Add creator wallet address
-        questions: questions.map((q) => ({
-          id: q.id,
-          title: q.title,
-          description: q.description,
-          type: q.type,
-          options: q.options,
-        })),
-        paymentData: {
-          amount: payment.amount,
-          transactionId: payment.transactionId,
-          maxQuestions: payment.maxQuestions,
-        },
+        questions: [photoQuestionData],
+        creatorWalletAddress: address!,
       };
 
       const result = await createBountyForm(createFormData);
 
       if (result.success) {
-        console.log("Quest created successfully:", result.form);
-
-        // Clear saved quest data
+        // Clean up localStorage
         localStorage.removeItem("pendingFormData");
+        localStorage.removeItem("pendingPhotoTask");
 
-        // Redirect directly to success page
-        router.push(
-          `/form-success?name=${encodeURIComponent(formData.name)}&amount=${payment.amount
-          }&token=${payment.token}&questions=${payment.maxQuestions}&txId=${payment.transactionId
-          }`
-        );
+        // Navigate to success page
+        router.push(`/form-success?formId=${result.form?.id}&type=photo`);
       } else {
-        setError(result.error || "Failed to create quest");
-        setShowPaymentModal(true); // Show payment modal again
+        setError(result.error || "Failed to create photo quest");
+        setShowPaymentModal(true);
       }
     } catch (err) {
-      console.error("Error creating quest:", err);
-      setError("An unexpected error occurred. Please try again.");
-      setShowPaymentModal(true); // Show payment modal again
+      console.error("Error creating photo quest:", err);
+      setError("Failed to create photo quest. Please try again.");
+      setShowPaymentModal(true);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePaymentCancel = () => {
-    setShowPaymentModal(false);
-    onBack();
-  };
+  if (!formData) {
+    return (
+      <div className="fixed inset-0 bg-gray-50 z-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading quest data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
@@ -882,113 +1319,340 @@ function PaymentStepPage({
         <div className="flex items-center space-x-3">
           <button
             onClick={onBack}
-            disabled={isLoading}
-            className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
           >
             ←
           </button>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            Fund Your Quest
+            Fund Your Photo Quest
           </h1>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
-        {/* Quest Summary */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Quest Summary
-          </h3>
-
-          {formData && (
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm font-medium text-gray-600">
-                  Form Name:
-                </span>
-                <p className="text-gray-900">{formData.name}</p>
-              </div>
-              {formData.description && (
-                <div>
-                  <span className="text-sm font-medium text-gray-600">
-                    Description:
-                  </span>
-                  <p className="text-gray-900">{formData.description}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm font-medium text-gray-600">
-                    Start Date:
-                  </span>
-                  <p className="text-gray-900">{formData.startDate}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">
-                    End Date:
-                  </span>
-                  <p className="text-gray-900">{formData.endDate}</p>
-                </div>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-600">
-                  Questions:
-                </span>
-                <p className="text-gray-900">{questions.length} questions</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Payment Instructions */}
-        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <span className="text-2xl">💳</span>
-            <h3 className="text-lg font-semibold text-blue-900">
-              Payment Required
+      {/* Loading State */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Creating Photo Quest...
             </h3>
+            <p className="text-gray-600">
+              Please wait while we set up your photo task
+            </p>
           </div>
-          <p className="text-blue-800 mb-3">
-            To activate your form and make it available for participants, you
-            need to fund it with rewards.
-          </p>
-          <ul className="text-sm text-blue-700 space-y-1">
-            <li>• Choose how many questions to fund</li>
-            <li>• Set reward amount per question</li>
-            <li>• Select payment token (USDC or WLD)</li>
-            <li>• Complete payment to activate your form</li>
-          </ul>
         </div>
+      )}
 
-        {/* Error Display */}
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <span className="text-red-600">❌</span>
+      {/* Error State */}
+      {error && !showPaymentModal && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg m-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-red-600">❌</span>
+            <div className="flex-1">
               <p className="text-sm text-red-700">{error}</p>
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="text-red-600 underline text-sm mt-1 hover:text-red-800"
+              >
+                Try Payment Again
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-200 text-center">
-            <div className="flex items-center justify-center space-x-3">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-gray-700">Creating your form...</span>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Payment Modal */}
-      <PaymentModal
-        isOpen={showPaymentModal}
-        onClose={handlePaymentCancel}
-        onPaymentSuccess={handlePaymentSuccess}
-        formName={formData?.name || "Your Form"}
-      />
+      {showPaymentModal && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onPaymentSuccess={handlePaymentSuccess}
+          formName={formData.name}
+        />
+      )}
+
+      {/* Content */}
+      <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Photo Quest Summary
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Quest Name:
+              </span>
+              <p className="text-gray-900">{formData.name}</p>
+            </div>
+
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Photo Task:
+              </span>
+              <p className="text-gray-900">{photoTask.title}</p>
+            </div>
+
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Duration:
+              </span>
+              <p className="text-gray-900">
+                {formData.startDate} to {formData.endDate}
+              </p>
+            </div>
+
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Eligibility:
+              </span>
+              <p className="text-gray-900">
+                {formData.userEligibility === "All"
+                  ? "All Users"
+                  : formData.userEligibility === "Device"
+                  ? "Device Verified Only"
+                  : "Orb Verified Only"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start space-x-2">
+            <span className="text-blue-600">ℹ️</span>
+            <div>
+              <p className="text-sm text-blue-800">
+                You'll pay rewards for each photo submission that you approve.
+                Set your reward amount and fund your quest to get started.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Survey Payment Step Page Component
+function PaymentStepPage({
+  questions,
+  onBack,
+}: {
+  questions: Question[];
+  onBack: () => void;
+}) {
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+    userEligibility: "Orb" | "Device" | "All";
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(true);
+
+  const router = useRouter();
+  const { isConnected, address } = useWallet();
+
+  // Get quest data from localStorage
+  React.useEffect(() => {
+    const savedFormData = localStorage.getItem("pendingFormData");
+    if (savedFormData) {
+      setFormData(JSON.parse(savedFormData));
+    }
+  }, []);
+
+  const handlePaymentSuccess = async (payment: {
+    amount: number;
+    token: "USDC" | "WLD";
+    transactionId: string;
+    maxQuestions: number;
+    rewardPerQuestion: number;
+  }) => {
+    setShowPaymentModal(false);
+    setIsLoading(true);
+    setError(null);
+
+    if (!formData) {
+      setError("Quest data is missing. Please go back and try again.");
+      return;
+    }
+
+    try {
+      // Convert questions to the format expected by createBountyForm
+      const questionsData = questions.map((q, index) => ({
+        id: q.id,
+        title: q.title,
+        description: q.description,
+        type: q.type,
+        options: q.options,
+      }));
+
+      const createFormData: CreateFormData = {
+        name: formData.name,
+        description: formData.description,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        visibility: "Public" as const,
+        rewardPerQuestion: payment.rewardPerQuestion,
+        rewardToken: payment.token,
+        userEligibility: formData.userEligibility,
+        questions: questionsData,
+        creatorWalletAddress: address!,
+      };
+
+      const result = await createBountyForm(createFormData);
+
+      if (result.success) {
+        // Clean up localStorage
+        localStorage.removeItem("pendingFormData");
+
+        // Navigate to success page
+        router.push(`/form-success?formId=${result.form?.id}&type=survey`);
+      } else {
+        setError(result.error || "Failed to create survey quest");
+        setShowPaymentModal(true);
+      }
+    } catch (err) {
+      console.error("Error creating survey quest:", err);
+      setError("Failed to create survey quest. Please try again.");
+      setShowPaymentModal(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!formData) {
+    return (
+      <div className="fixed inset-0 bg-gray-50 z-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading quest data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b px-4 py-3 sticky top-0 z-10">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            ←
+          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Fund Your Survey Quest
+          </h1>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Creating Survey Quest...
+            </h3>
+            <p className="text-gray-600">
+              Please wait while we set up your survey
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !showPaymentModal && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg m-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-red-600">❌</span>
+            <div className="flex-1">
+              <p className="text-sm text-red-700">{error}</p>
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="text-red-600 underline text-sm mt-1 hover:text-red-800"
+              >
+                Try Payment Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onPaymentSuccess={handlePaymentSuccess}
+          formName={formData.name}
+        />
+      )}
+
+      {/* Content */}
+      <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Survey Quest Summary
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Quest Name:
+              </span>
+              <p className="text-gray-900">{formData.name}</p>
+            </div>
+
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Questions:
+              </span>
+              <p className="text-gray-900">{questions.length} questions</p>
+            </div>
+
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Duration:
+              </span>
+              <p className="text-gray-900">
+                {formData.startDate} to {formData.endDate}
+              </p>
+            </div>
+
+            <div>
+              <span className="text-sm font-medium text-gray-600">
+                Eligibility:
+              </span>
+              <p className="text-gray-900">
+                {formData.userEligibility === "All"
+                  ? "All Users"
+                  : formData.userEligibility === "Device"
+                  ? "Device Verified Only"
+                  : "Orb Verified Only"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start space-x-2">
+            <span className="text-blue-600">ℹ️</span>
+            <div>
+              <p className="text-sm text-blue-800">
+                You'll pay rewards for each survey response that you approve.
+                Set your reward amount and fund your quest to get started.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
