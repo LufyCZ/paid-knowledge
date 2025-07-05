@@ -193,6 +193,88 @@ export interface Database {
           updated_at?: string;
         };
       };
+      user_profiles: {
+        Row: {
+          id: string;
+          wallet_address: string;
+          username: string | null;
+          verification_level: "None" | "Device" | "Orb";
+          device_verified_at: string | null;
+          orb_verified_at: string | null;
+          notifications_enabled: boolean;
+          total_rewards_earned: number;
+          total_rewards_usdc: number;
+          total_rewards_wld: number;
+          forms_created_count: number;
+          forms_submitted_count: number;
+          forms_accepted_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          wallet_address: string;
+          username?: string | null;
+          verification_level?: "None" | "Device" | "Orb";
+          device_verified_at?: string | null;
+          orb_verified_at?: string | null;
+          notifications_enabled?: boolean;
+          total_rewards_earned?: number;
+          total_rewards_usdc?: number;
+          total_rewards_wld?: number;
+          forms_created_count?: number;
+          forms_submitted_count?: number;
+          forms_accepted_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          wallet_address?: string;
+          username?: string | null;
+          verification_level?: "None" | "Device" | "Orb";
+          device_verified_at?: string | null;
+          orb_verified_at?: string | null;
+          notifications_enabled?: boolean;
+          total_rewards_earned?: number;
+          total_rewards_usdc?: number;
+          total_rewards_wld?: number;
+          forms_created_count?: number;
+          forms_submitted_count?: number;
+          forms_accepted_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      verification_logs: {
+        Row: {
+          id: string;
+          wallet_address: string;
+          verification_type: "Device" | "Orb";
+          world_id_payload: any;
+          verified_at: string;
+          action_id: string | null;
+          signal: string | null;
+        };
+        Insert: {
+          id?: string;
+          wallet_address: string;
+          verification_type: "Device" | "Orb";
+          world_id_payload?: any;
+          verified_at?: string;
+          action_id?: string | null;
+          signal?: string | null;
+        };
+        Update: {
+          id?: string;
+          wallet_address?: string;
+          verification_type?: "Device" | "Orb";
+          world_id_payload?: any;
+          verified_at?: string;
+          action_id?: string | null;
+          signal?: string | null;
+        };
+      };
     };
   };
 }
@@ -206,3 +288,6 @@ export type QuestionAnswer =
   Database["public"]["Tables"]["question_answers"]["Row"];
 export type PaymentReference =
   Database["public"]["Tables"]["payment_references"]["Row"];
+export type UserProfile = Database["public"]["Tables"]["user_profiles"]["Row"];
+export type VerificationLog =
+  Database["public"]["Tables"]["verification_logs"]["Row"];

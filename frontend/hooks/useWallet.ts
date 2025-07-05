@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MiniKit, RequestPermissionPayload, Permission } from "@worldcoin/minikit-js";
+import {
+  MiniKit,
+  RequestPermissionPayload,
+  Permission,
+} from "@worldcoin/minikit-js";
 import { useMiniKit } from "../app/providers";
 
 interface WalletState {
@@ -126,8 +130,18 @@ export const useWallet = () => {
       // Check if we have stored wallet data and it's still valid
       const stored = loadStoredWalletData();
       if (stored.isConnected && stored.address) {
-        // Check if MiniKit has current user data
+        // Update state with stored data if not already connected
+        if (!state.isConnected) {
+          setState(stored);
+        }
+
+        // Check if MiniKit has current user data and update username
         const currentUsername = MiniKit.user?.username || null;
+
+        // Store username separately for easy access
+        if (currentUsername) {
+          localStorage.setItem("world_username", currentUsername);
+        }
 
         if (currentUsername && currentUsername !== stored.worldchainUsername) {
           const updatedData = {
@@ -141,11 +155,34 @@ export const useWallet = () => {
     }
   }, [installed]);
 
+  // Periodic check for username updates
+  useEffect(() => {
+    if (!installed || !state.isConnected) return;
+
+    const checkUsernameInterval = setInterval(() => {
+      const currentUsername = MiniKit.user?.username || null;
+      if (currentUsername && currentUsername !== state.worldchainUsername) {
+        console.log("Username updated:", currentUsername);
+        const updatedData = {
+          ...state,
+          worldchainUsername: currentUsername,
+        };
+        setState(updatedData);
+        saveWalletData(updatedData);
+        localStorage.setItem("world_username", currentUsername);
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(checkUsernameInterval);
+  }, [installed, state.isConnected, state.worldchainUsername]);
+
   const requestNotificationPermission = async () => {
     const requestPermissionPayload: RequestPermissionPayload = {
       permission: Permission.Notifications,
     };
-    const { finalPayload } = await MiniKit.commandsAsync.requestPermission(requestPermissionPayload);
+    const { finalPayload } = await MiniKit.commandsAsync.requestPermission(
+      requestPermissionPayload
+    );
     if (finalPayload.status === "success") {
       const response = await fetch("/api/notifications", {
         method: "POST",
@@ -159,7 +196,7 @@ export const useWallet = () => {
         }
       }
     }
-  }
+  };
 
   return {
     ...state,

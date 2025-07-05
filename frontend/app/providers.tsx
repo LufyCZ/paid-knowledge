@@ -37,6 +37,39 @@ const MiniKitContext = createContext<{ installed: boolean }>({
 });
 export const useMiniKit = () => useContext(MiniKitContext);
 
+// Connection Manager Component
+function ConnectionManager() {
+  const { installed } = useMiniKit();
+
+  useEffect(() => {
+    if (!installed) return;
+
+    // Auto-restore connection logic
+    const checkStoredConnection = () => {
+      if (typeof window === "undefined") return;
+
+      const storedWallet = localStorage.getItem("worldchain-wallet");
+      if (storedWallet) {
+        try {
+          const walletData = JSON.parse(storedWallet);
+          if (walletData.isConnected && walletData.address) {
+            console.log("Found stored wallet connection");
+            // The useWallet hook in components will handle the actual reconnection
+          }
+        } catch (error) {
+          console.error("Failed to parse stored wallet:", error);
+        }
+      }
+    };
+
+    // Check after MiniKit is installed
+    const timer = setTimeout(checkStoredConnection, 1000);
+    return () => clearTimeout(timer);
+  }, [installed]);
+
+  return null;
+}
+
 // ---- Provider Wrapper ----
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
@@ -54,6 +87,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <MiniKitContext.Provider value={{ installed }}>
+        <ConnectionManager />
         {children}
       </MiniKitContext.Provider>
     </QueryClientProvider>

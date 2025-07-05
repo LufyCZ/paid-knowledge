@@ -33,6 +33,13 @@ export default function Home() {
             </Link>
 
             <Link
+              href="/account"
+              className="inline-block bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
+            >
+              👤 My Account
+            </Link>
+
+            <Link
               href="/payment-test"
               className="inline-block bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
             >
