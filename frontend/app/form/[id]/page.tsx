@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { getBountyForm, submitFormResponse } from "@/lib/forms";
 import { useWallet } from "@/hooks/useWallet";
+import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { BountyForm, FormQuestion } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
@@ -73,52 +74,57 @@ export default function FormPage() {
     },
   });
 
-  useEffect(() => {
-    async function loadForm() {
-      try {
-        const result = await getBountyForm(formId);
-        if (!result.success || !result.data) {
-          setError("Form not found");
-          return;
-        }
-
-        // Check if form is active
-        if (result.data.status !== "active") {
-          setError("This form is not currently active");
-          return;
-        }
-
-        // Check dates
-        const now = new Date();
-        const startDate = new Date(result.data.start_date);
-        const endDate = new Date(result.data.end_date);
-
-        if (now < startDate) {
-          setError("This form is not yet available");
-          return;
-        }
-
-        if (now > endDate) {
-          setError("This form has expired");
-          return;
-        }
-
-        // Sort questions by order
-        const sortedQuestions = [...result.data.form_questions].sort(
-          (a, b) => a.order_index - b.order_index
-        );
-
-        setFormData({
-          ...result.data,
-          form_questions: sortedQuestions,
-        });
-      } catch (err) {
-        setError("Failed to load form");
-      } finally {
-        setLoading(false);
+  const loadForm = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getBountyForm(formId);
+      if (!result.success || !result.data) {
+        setError("Form not found");
+        return;
       }
-    }
 
+      // Check if form is active
+      if (result.data.status !== "active") {
+        setError("This form is not currently active");
+        return;
+      }
+
+      // Check dates
+      const now = new Date();
+      const startDate = new Date(result.data.start_date);
+      const endDate = new Date(result.data.end_date);
+
+      if (now < startDate) {
+        setError("This form is not yet available");
+        return;
+      }
+
+      if (now > endDate) {
+        setError("This form has expired");
+        return;
+      }
+
+      // Sort questions by order
+      const sortedQuestions = [...result.data.form_questions].sort(
+        (a, b) => a.order_index - b.order_index
+      );
+
+      setFormData({
+        ...result.data,
+        form_questions: sortedQuestions,
+      });
+    } catch (err) {
+      setError("Failed to load form");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use data refresh hook for navigation events
+  useDataRefresh({ refreshFn: loadForm });
+
+  useEffect(() => {
     if (formId) {
       loadForm();
     }

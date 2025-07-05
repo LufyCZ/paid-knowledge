@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useWallet } from "@/hooks/useWallet";
 import { useQuestResponses } from "@/hooks/useUserQuests";
+import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -19,9 +20,16 @@ export default function QuestResponsesPage() {
     loading,
     error,
     updatingResponse,
+    refreshResponses,
     approveResponse,
     rejectResponse,
   } = useQuestResponses(questId, address);
+
+  // Add data refresh on navigation events
+  useDataRefresh({
+    refreshFn: refreshResponses,
+    dependencies: [address, questId],
+  });
 
   // Get quest name from URL params if available
   useEffect(() => {

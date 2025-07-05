@@ -280,8 +280,7 @@ export async function submitFormResponse(submissionData: FormSubmissionData) {
     }
 
     const form = formResult.data;
-    const totalReward =
-      form.reward_per_question * submissionData.answers.length;
+    const totalReward = form.reward_per_question; // Use the stored value directly as total reward
 
     // 2. Create form response
     const { data: response, error: responseError } = await supabase

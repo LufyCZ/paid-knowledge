@@ -9,6 +9,7 @@ import {
   getVerificationLevel,
 } from "@/hooks/useProfile";
 import { useWorldIdVerification } from "@/hooks/useWorldIdVerification";
+import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { useMiniKit } from "../providers";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,12 @@ export default function AccountPage() {
   const { profile, isLoading, error, refreshProfile, updateProfile } =
     useProfile();
   const [isClient, setIsClient] = useState(false);
+
+  // Add data refresh on navigation events
+  useDataRefresh({
+    refreshFn: refreshProfile,
+    dependencies: [isConnected, address],
+  });
 
   // Prevent hydration issues
   useEffect(() => {

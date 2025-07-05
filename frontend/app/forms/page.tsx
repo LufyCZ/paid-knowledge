@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getBountyForms } from "@/lib/forms";
 import { BountyForm } from "@/lib/supabase";
+import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { Button } from "@/components/ui/button";
 
 export default function FormsListPage() {
@@ -23,36 +24,43 @@ export default function FormsListPage() {
   const [tokenFilter, setTokenFilter] = useState<"All" | "USDC" | "WLD">("All");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
-  useEffect(() => {
-    async function loadForms() {
-      try {
-        const result = await getBountyForms();
-        if (!result.success) {
-          setError(result.error || "Failed to load forms");
-          return;
-        }
-
-        // Filter to only show active, public forms within date range
-        const now = new Date();
-        const activeForms = (result.data || []).filter((form) => {
-          const startDate = new Date(form.start_date);
-          const endDate = new Date(form.end_date);
-          return (
-            form.status === "active" &&
-            form.visibility === "Public" &&
-            now >= startDate &&
-            now <= endDate
-          );
-        });
-
-        setAllForms(activeForms);
-      } catch (err) {
-        setError("Failed to load forms");
-      } finally {
-        setLoading(false);
+  const loadForms = async () => {
+    try {
+      setLoading(true);
+      const result = await getBountyForms();
+      if (!result.success) {
+        setError(result.error || "Failed to load forms");
+        return;
       }
-    }
 
+      // Filter to only show active, public forms within date range
+      const now = new Date();
+      const activeForms = (result.data || []).filter((form) => {
+        const startDate = new Date(form.start_date);
+        const endDate = new Date(form.end_date);
+        return (
+          form.status === "active" &&
+          form.visibility === "Public" &&
+          now >= startDate &&
+          now <= endDate
+        );
+      });
+
+      setAllForms(activeForms);
+    } catch (err) {
+      console.error("Error loading forms:", err);
+      setError(err instanceof Error ? err.message : "Failed to load forms");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add data refresh on navigation events
+  useDataRefresh({
+    refreshFn: loadForms,
+  });
+
+  useEffect(() => {
     loadForms();
   }, []);
 

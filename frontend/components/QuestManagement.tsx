@@ -333,7 +333,7 @@ export function QuestManagement({ walletAddress }: QuestManagementProps) {
               <div className="flex items-center space-x-4 text-sm text-gray-500">
                 <span>📝 {quest.form_questions.length} questions</span>
                 <span>
-                  💰 {quest.reward_per_question} {quest.reward_token}
+                  💰 {quest.reward_per_question.toFixed(2)} {quest.reward_token}
                 </span>
                 <span>
                   📅 Ends {new Date(quest.end_date).toLocaleDateString()}

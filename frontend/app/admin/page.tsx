@@ -5,17 +5,31 @@ import {
   useAdminStats,
   useFormExport,
 } from "../../hooks/useAdmin";
+import { useDataRefresh } from "../../hooks/useDataRefresh";
 
 export default function AdminDashboard() {
   const {
     forms,
     loading: formsLoading,
     error: formsError,
+    refetch: refetchForms,
     updateFormStatus,
     deleteForm,
   } = useAdminForms();
-  const { stats, loading: statsLoading, error: statsError } = useAdminStats();
+  const {
+    stats,
+    loading: statsLoading,
+    error: statsError,
+    refetch: refetchStats,
+  } = useAdminStats();
   const { exportForm, loading: exportLoading } = useFormExport();
+
+  // Refresh both forms and stats when navigation events occur
+  const refreshData = async () => {
+    await Promise.all([refetchForms(), refetchStats()]);
+  };
+
+  useDataRefresh({ refreshFn: refreshData });
 
   if (formsLoading || statsLoading) {
     return (

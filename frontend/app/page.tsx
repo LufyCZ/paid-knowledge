@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useForms, type FormData } from "@/hooks/useForms";
+import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { ClientOnly } from "@/components/ClientOnly";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,16 @@ const FILTER_OPTIONS = [
 
 export default function HomePage() {
   const { isConnected } = useWallet();
-  const { featuredForms, allForms, isLoading, error } = useForms();
+  const { featuredForms, allForms, isLoading, error, refreshForms } =
+    useForms();
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [isClient, setIsClient] = useState(false);
+
+  // Add data refresh on navigation events
+  useDataRefresh({
+    refreshFn: refreshForms,
+    dependencies: [isConnected],
+  });
 
   // Prevent hydration mismatch by only rendering after client mount
   useEffect(() => {
