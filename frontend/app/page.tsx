@@ -103,13 +103,7 @@ export default function HomePage() {
     }
   };
 
-  const FormCard = ({
-    form,
-    isFeatured = false,
-  }: {
-    form: FormData;
-    isFeatured?: boolean;
-  }) => (
+  const FormCard = ({ form }: { form: FormData; isFeatured?: boolean }) => (
     <Link href={`/form/${form.id}`} className="block">
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:border-gray-200">
         {/* Header with tags */}

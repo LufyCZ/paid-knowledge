@@ -13,7 +13,7 @@ export const client = createWalletClient({
   account: privateKeyToAccount(WALLET_PRIVATE_KEY as Hex)
 }).extend(publicActions)
 
-export const bountyManagerAddress = "0x" as const
+export const bountyManagerAddress = "0x943b001e80c8E6De9254092C7462aEf48d454A0B" as const
 
 export const bountyManagerAbi = [
   {

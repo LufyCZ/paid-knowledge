@@ -102,9 +102,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   if (!isClient) {
     return (
       <QueryClientProvider client={queryClient}>
-        <MiniKitContext.Provider value={{ installed: false }}>
-          {children}
-        </MiniKitContext.Provider>
+        <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+          <MiniKitContext.Provider value={{ installed: false }}>
+            {children}
+          </MiniKitContext.Provider>
+        </TRPCProvider>
       </QueryClientProvider>
     );
   }
