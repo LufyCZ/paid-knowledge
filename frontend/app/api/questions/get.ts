@@ -29,12 +29,12 @@ export const questionsGet = publicProcedure.query(async ({ ctx }) => {
         blobId,
       });
       const text = new TextDecoder().decode(blob);
-      return questionSchema.parse(JSON.parse(text));
+      return { id: blobId, ...questionSchema.parse(JSON.parse(text)) }
     }))
 
 
   const successfulQuestions = questions
-    .filter((result): result is PromiseFulfilledResult<z.infer<typeof questionSchema>> => result.status === 'fulfilled')
+    .filter((result): result is PromiseFulfilledResult<{ id: string } & z.infer<typeof questionSchema>> => result.status === 'fulfilled')
     .map(result => result.value);
 
   return successfulQuestions;
