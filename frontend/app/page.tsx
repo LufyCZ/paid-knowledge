@@ -2,37 +2,43 @@
 
 import { useState, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
-import { useForms, type FormData } from "@/hooks/useForms";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { ClientOnly } from "@/components/ClientOnly";
-import { ErrorWithRetry } from "@/components/RetryButton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useTRPC } from "@/lib/trpc";
+import { useQuery } from "@tanstack/react-query";
+import { formatUnits } from "viem";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All" },
-  { id: "photo", label: "Photo" },
-  { id: "form", label: "Survey" },
-];
+  { id: "orb", label: "Orb Verified" },
+  { id: "device", label: "Device Verified" },
+] as const;
+
+const FEATURED_FORM_IDS: string[] = [];
+
+const TOKEN_DECIMALS = {
+  WLD: 18,
+  USDC: 6,
+} as const;
 
 export default function HomePage() {
   const { isConnected } = useWallet();
+  const trpc = useTRPC();
   const {
-    featuredForms,
-    allForms,
+    data: allForms,
     isLoading,
     error,
-    retryCount,
-    canRetry,
-    refreshForms,
-    retry,
-  } = useForms();
-  const [selectedFilter, setSelectedFilter] = useState("all");
+    refetch: refreshForms,
+  } = useQuery(trpc.questions.get.queryOptions());
+  const [selectedFilter, setSelectedFilter] =
+    useState<(typeof FILTER_OPTIONS)[number]["id"]>("all");
   const [isClient, setIsClient] = useState(false);
 
   // Add data refresh on navigation events
   useDataRefresh({
-    refreshFn: refreshForms,
+    refreshFn: () => void refreshForms(),
     dependencies: [], // Remove dependencies to prevent infinite loops
   });
 
@@ -45,37 +51,37 @@ export default function HomePage() {
     selectedFilter === "all"
       ? allForms
       : selectedFilter === "orb"
-      ? allForms.filter((form) => form.eligibility === "Orb")
-      : allForms.filter(
-          (form) =>
-            form.category === selectedFilter ||
-            (selectedFilter === "form" && form.type === "Survey")
-        );
+      ? allForms?.filter((form) => form.verificationLevel === "orb")
+      : selectedFilter === "device"
+      ? allForms?.filter((form) => form.verificationLevel === "device")
+      : allForms;
+
+  const featuredForms = allForms?.filter((form) =>
+    FEATURED_FORM_IDS.includes(form.id)
+  );
 
   // Helper function to get eligibility badge
-  const getEligibilityBadge = (eligibility: string) => {
+  const getEligibilityBadge = (eligibility: "orb" | "device") => {
     switch (eligibility) {
-      case "Orb":
+      case "orb":
         return (
           <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-700">
             Orb verified
           </span>
         );
-      case "Device":
+      case "device":
         return (
           <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
             Device verified
           </span>
         );
-      case "All":
-        return null; // Don't show badge for "All" eligibility
       default:
         return null;
     }
   };
 
   // Helper function to format date (hydration-safe)
-  const formatEndDate = (dateString: string) => {
+  const formatEndDate = (dateString: number) => {
     if (!isClient) return ""; // Return empty string during SSR
 
     const date = new Date(dateString);
@@ -103,16 +109,18 @@ export default function HomePage() {
     }
   };
 
-  const FormCard = ({ form }: { form: FormData; isFeatured?: boolean }) => (
+  const FormCard = ({
+    form,
+  }: {
+    form: NonNullable<typeof allForms>[number];
+    isFeatured?: boolean;
+  }) => (
     <Link href={`/form/${form.id}`} className="block">
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:border-gray-200">
         {/* Header with tags */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700">
-              {form.type === "Survey" ? "Survey" : form.type}
-            </span>
-            {getEligibilityBadge(form.eligibility)}
+            {getEligibilityBadge(form.verificationLevel)}
           </div>
         </div>
 
@@ -144,9 +152,15 @@ export default function HomePage() {
             </svg>
             {formatEndDate(form.endDate)}
           </div>
-          <div className="text-lg font-semibold text-gray-900">
-            {form.reward}
-          </div>
+          {form.reward ? (
+            <div className="text-lg font-semibold text-gray-900">
+              {formatUnits(
+                BigInt(form.reward.amount),
+                TOKEN_DECIMALS[form.reward.currency]
+              )}{" "}
+              {form.reward.currency}
+            </div>
+          ) : null}
         </div>
       </div>
     </Link>
@@ -201,16 +215,12 @@ export default function HomePage() {
               </div>
             </div>
           ) : error ? (
-            <div className="mx-6">
-              <ErrorWithRetry
-                error={error}
-                onRetry={retry}
-                isLoading={isLoading}
-                canRetry={canRetry}
-                retryCount={retryCount}
-                title="Failed to load quests"
-                description="There was an error loading the available quests. Please try again."
-              />
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center mx-6">
+              <div className="text-4xl mb-4">⚠️</div>
+              <p className="text-red-800 font-medium mb-2">
+                Something went wrong
+              </p>
+              <p className="text-red-600 text-sm">{error.message}</p>
             </div>
           ) : (
             <>
@@ -219,7 +229,7 @@ export default function HomePage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-6">
                   Featured
                 </h2>
-                {featuredForms.length > 0 ? (
+                {featuredForms && featuredForms.length > 0 ? (
                   <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2 -mx-6 px-6">
                     {featuredForms.map((form) => (
                       <div key={form.id} className="flex-shrink-0 w-80">
@@ -262,7 +272,7 @@ export default function HomePage() {
 
                 {/* Forms Grid */}
                 <div className="px-6">
-                  {filteredForms.length > 0 ? (
+                  {filteredForms && filteredForms.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {filteredForms.map((form) => (
                         <FormCard key={form.id} form={form} />
