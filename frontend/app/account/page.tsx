@@ -320,62 +320,60 @@ export default function AccountPage() {
                   </div>
 
                   {/* Stats */}
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
-                        {" "}
-                        <div className="text-2xl font-bold text-blue-700">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg border border-blue-200">
+                        <div className="text-lg font-bold text-blue-700">
                           {profile.forms_created_count}
                         </div>
-                        <div className="text-sm text-blue-600 font-medium">
+                        <div className="text-xs text-blue-600 font-medium">
                           Quests Created
                         </div>
                       </div>
-                      <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-                        <div className="text-2xl font-bold text-green-700">
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg border border-green-200">
+                        <div className="text-lg font-bold text-green-700">
                           {profile.forms_submitted_count}
                         </div>
-                        <div className="text-sm text-green-600 font-medium">
+                        <div className="text-xs text-green-600 font-medium">
                           Quests Submitted
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
-                        {" "}
-                        <div className="text-2xl font-bold text-purple-700">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-lg border border-purple-200">
+                        <div className="text-lg font-bold text-purple-700">
                           {profile.forms_accepted_count}
                         </div>
-                        <div className="text-sm text-purple-600 font-medium">
+                        <div className="text-xs text-purple-600 font-medium">
                           Quests Accepted
                         </div>
                       </div>
-                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
-                        <div className="text-2xl font-bold text-orange-700">
+                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 rounded-lg border border-orange-200">
+                        <div className="text-lg font-bold text-orange-700">
                           $ {profile.total_rewards_earned.toFixed(2)}
                         </div>
-                        <div className="text-sm text-orange-600 font-medium">
+                        <div className="text-xs text-orange-600 font-medium">
                           Total Rewards
                         </div>
                       </div>
                     </div>
 
                     {/* Separate USDC and WLD Rewards */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-4 rounded-xl border border-indigo-200">
-                        <div className="text-xl font-bold text-indigo-700">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-3 rounded-lg border border-indigo-200">
+                        <div className="text-base font-bold text-indigo-700">
                           {(profile.total_rewards_usdc || 0).toFixed(2)}
                         </div>
-                        <div className="text-sm text-indigo-600 font-medium">
+                        <div className="text-xs text-indigo-600 font-medium">
                           💵 USDC Earned
                         </div>
                       </div>
-                      <div className="bg-gradient-to-br from-violet-50 to-violet-100 p-4 rounded-xl border border-violet-200">
-                        <div className="text-xl font-bold text-violet-700">
+                      <div className="bg-gradient-to-br from-violet-50 to-violet-100 p-3 rounded-lg border border-violet-200">
+                        <div className="text-base font-bold text-violet-700">
                           {(profile.total_rewards_wld || 0).toFixed(2)}
                         </div>
-                        <div className="text-sm text-violet-600 font-medium">
+                        <div className="text-xs text-violet-600 font-medium">
                           🌍 WLD Earned
                         </div>
                       </div>
