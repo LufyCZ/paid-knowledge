@@ -51,7 +51,10 @@ export function useForms() {
       type,
       title: form.name,
       description: form.description || "",
-      reward: `$${form.reward_per_question} ${form.reward_token}`,
+      reward:
+        form.reward_token === "WLD"
+          ? `${form.reward_per_question} ${form.reward_token}`
+          : `$${form.reward_per_question} ${form.reward_token}`,
       duration,
       location,
       category: type.toLowerCase(),

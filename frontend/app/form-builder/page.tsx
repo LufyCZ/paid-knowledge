@@ -129,7 +129,7 @@ export default function FormBuilder() {
               </Button>
             </Link>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Choose Builder Type
+              Quest Type
             </h1>
           </div>
         </div>
@@ -375,7 +375,7 @@ export default function FormBuilder() {
             ← Back
           </Button>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            Create Your Bounty Quest
+            Create Quest
           </h1>
         </div>
       </div>

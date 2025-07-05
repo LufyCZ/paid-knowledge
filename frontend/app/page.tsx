@@ -181,17 +181,17 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="px-6 py-8 space-y-8">
+        <div className="py-8 space-y-8">
           {/* Show loading until client is mounted to prevent hydration issues */}
           {!isClient || isLoading ? (
-            <div className="flex justify-center items-center py-16">
+            <div className="flex justify-center items-center py-16 px-6">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-black mx-auto mb-4"></div>
                 <p className="text-gray-600">Loading forms...</p>
               </div>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center mx-6">
               <div className="text-4xl mb-4">⚠️</div>
               <p className="text-red-800 font-medium mb-2">
                 Something went wrong
@@ -201,12 +201,12 @@ export default function HomePage() {
           ) : (
             <>
               {/* Featured Section */}
-              <section>
+              <section className="px-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">
                   Featured
                 </h2>
                 {featuredForms.length > 0 ? (
-                  <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2">
+                  <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2 -mx-6 px-6">
                     {featuredForms.map((form) => (
                       <div key={form.id} className="flex-shrink-0 w-80">
                         <FormCard form={form} isFeatured={true} />
@@ -223,12 +223,14 @@ export default function HomePage() {
 
               {/* Explore Section */}
               <section>
-                <h2 className="text-xl font-bold text-gray-900 mb-6">
-                  Explore
-                </h2>
+                <div className="px-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-6">
+                    Explore
+                  </h2>
+                </div>
 
-                {/* Filter Tabs */}
-                <div className="flex space-x-3 mb-6 overflow-x-auto scrollbar-hide pb-2">
+                {/* Filter Tabs - Full width, no padding */}
+                <div className="flex space-x-3 mb-6 overflow-x-auto scrollbar-hide pb-2 px-6">
                   {FILTER_OPTIONS.map((filter) => (
                     <button
                       key={filter.id}
@@ -245,18 +247,20 @@ export default function HomePage() {
                 </div>
 
                 {/* Forms Grid */}
-                {filteredForms.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredForms.map((form) => (
-                      <FormCard key={form.id} form={form} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-gray-500 text-center py-12 bg-white rounded-2xl border border-gray-100">
-                    <div className="text-4xl mb-4">🔍</div>
-                    <p>No forms available for the selected filter</p>
-                  </div>
-                )}
+                <div className="px-6">
+                  {filteredForms.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredForms.map((form) => (
+                        <FormCard key={form.id} form={form} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 text-center py-12 bg-white rounded-2xl border border-gray-100">
+                      <div className="text-4xl mb-4">🔍</div>
+                      <p>No forms available for the selected filter</p>
+                    </div>
+                  )}
+                </div>
               </section>
             </>
           )}
