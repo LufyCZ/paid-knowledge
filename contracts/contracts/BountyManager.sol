@@ -219,6 +219,18 @@ contract BountyManager {
         return bountyOwnerToBounties[owner].length;
     }
 
+    function getAnswersByBountyId(
+        bytes memory bountyId
+    ) public view returns (AnswerData[] memory) {
+        return bountyIdToAnswers[bountyId];
+    }
+
+    function getBountyIdByDataHash(
+        bytes memory dataHash
+    ) public view returns (bytes memory) {
+        return dataHashToBountyId[dataHash];
+    }
+
     function cleanupExpiredBounties(bytes[] memory bountyIds) external {
         for (uint256 i = 0; i < bountyIds.length; i++) {
             bytes memory bountyId = bountyIds[i];

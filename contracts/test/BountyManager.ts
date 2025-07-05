@@ -697,6 +697,86 @@ describe("BountyManager", function () {
         });
     });
 
+    describe("getAnswersByBountyId", function () {
+        const bountyId = ethersInstance.toUtf8Bytes("test-bounty-1");
+        const answerId1 = ethersInstance.toUtf8Bytes("test-answer-1");
+        const answerId2 = ethersInstance.toUtf8Bytes("test-answer-2");
+        const answerId3 = ethersInstance.toUtf8Bytes("test-answer-3");
+        let futureTimestamp: number;
+
+        beforeEach(async function () {
+            futureTimestamp = await getFutureTimestamp();
+        });
+
+        it("Should return empty array for bounty with no answers", async function () {
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+
+            const answers = await bountyManager.getAnswersByBountyId(bountyId);
+            expect(answers).to.have.length(0);
+        });
+
+        it("Should return all answers for bounty", async function () {
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+
+            await bountyManager.connect(user2).answerBounty(bountyId, answerId1, user2.address);
+            await bountyManager.connect(user3).answerBounty(bountyId, answerId2, user3.address);
+            await bountyManager.connect(user1).answerBounty(bountyId, answerId3, user1.address);
+
+            const answers = await bountyManager.getAnswersByBountyId(bountyId);
+            expect(answers).to.have.length(3);
+            expect(answers[0].answerId).to.equal(ethersInstance.hexlify(answerId1));
+            expect(answers[0].answerer).to.equal(user2.address);
+            expect(answers[1].answerId).to.equal(ethersInstance.hexlify(answerId2));
+            expect(answers[1].answerer).to.equal(user3.address);
+            expect(answers[2].answerId).to.equal(ethersInstance.hexlify(answerId3));
+            expect(answers[2].answerer).to.equal(user1.address);
+        });
+
+        it("Should return empty array for non-existent bounty", async function () {
+            const nonExistentBountyId = ethersInstance.toUtf8Bytes("non-existent");
+
+            const answers = await bountyManager.getAnswersByBountyId(nonExistentBountyId);
+            expect(answers).to.have.length(0);
+        });
+
+        it("Should maintain answer order", async function () {
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, getDataHash(bountyId));
+
+            await bountyManager.connect(user2).answerBounty(bountyId, answerId1, user2.address);
+            await bountyManager.connect(user3).answerBounty(bountyId, answerId2, user3.address);
+
+            const answers = await bountyManager.getAnswersByBountyId(bountyId);
+            expect(answers).to.have.length(2);
+            expect(answers[0].answerId).to.equal(ethersInstance.hexlify(answerId1));
+            expect(answers[1].answerId).to.equal(ethersInstance.hexlify(answerId2));
+        });
+    });
+
+    describe("getBountyIdByDataHash", function () {
+        const bountyId = ethersInstance.toUtf8Bytes("test-bounty-1");
+        const bountyId2 = ethersInstance.toUtf8Bytes("test-bounty-2");
+        let futureTimestamp: number;
+
+        beforeEach(async function () {
+            futureTimestamp = await getFutureTimestamp();
+        });
+
+        it("Should return correct bounty ID for existing data hash", async function () {
+            const dataHash = getDataHash(bountyId);
+            await bountyManager.connect(user1).createBounty(bountyId, user1.address, 0, ethersInstance.parseEther("0.1"), ethersInstance.parseEther("1"), futureTimestamp, dataHash);
+
+            const returnedBountyId = await bountyManager.getBountyIdByDataHash(dataHash);
+            expect(returnedBountyId).to.equal(ethersInstance.hexlify(bountyId));
+        });
+
+        it("Should return empty bytes for non-existent data hash", async function () {
+            const nonExistentDataHash = ethersInstance.toUtf8Bytes("non-existent-hash");
+
+            const returnedBountyId = await bountyManager.getBountyIdByDataHash(nonExistentDataHash);
+            expect(returnedBountyId).to.equal("0x");
+        });
+    });
+
     describe("cleanupExpiredBounties", function () {
         const bountyId1 = ethersInstance.toUtf8Bytes("test-bounty-1");
         const bountyId2 = ethersInstance.toUtf8Bytes("test-bounty-2");
