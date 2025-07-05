@@ -16,9 +16,9 @@ import { useTRPC } from "@/lib/trpc";
 import z from "zod";
 
 const QUESTION_TYPES = [
-  { name: "text", icon: "📄", description: "Text response" },
-  { name: "number", icon: "🔢", description: "Number response" },
-  { name: "image", icon: "📸", description: "Upload an image" },
+  { name: "Text", icon: "📄", description: "Text response" },
+  { name: "Number", icon: "🔢", description: "Number response" },
+  { name: "Image", icon: "📸", description: "Upload an image" },
 ];
 
 type Question = z.infer<typeof formEntrySchema>;
@@ -285,7 +285,10 @@ export default function FormBuilder() {
                   <button
                     key={type.name}
                     onClick={() =>
-                      addQuestion(type.name as FormEntryType, insertIndex)
+                      addQuestion(
+                        type.name.toLowerCase() as FormEntryType,
+                        insertIndex
+                      )
                     }
                     className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group"
                   >
@@ -349,7 +352,6 @@ function QuestionCard({
   index,
   totalQuestions,
   updateQuestion,
-  onAddQuestion,
   onDeleteQuestion,
   onMoveUp,
   onMoveDown,
@@ -669,13 +671,6 @@ function QuestionCard({
             </div>
           </div>
         )}
-
-        <button
-          onClick={onAddQuestion}
-          className="w-full mt-4 py-4 px-4 border-2 border-dashed border-gray-300 hover:border-blue-400 text-gray-600 hover:text-blue-600 rounded-lg transition-all duration-150 font-medium touch-manipulation active:bg-blue-50"
-        >
-          ➕ Add Question Below
-        </button>
       </div>
     </div>
   );
