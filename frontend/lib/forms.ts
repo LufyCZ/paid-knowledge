@@ -4,12 +4,9 @@ import { supabase } from "./supabase";
 export interface CreateFormData {
   name: string;
   description: string;
-  startDate: string;
-  endDate: string;
   visibility: "Public" | "Private";
   rewardPerQuestion: number;
   rewardToken: "USDC" | "WLD";
-  userEligibility?: "Orb" | "Device" | "All";
   questions: {
     id: number;
     title: string;
@@ -32,13 +29,13 @@ export async function createBountyForm(formData: CreateFormData) {
       .from("bounty_forms")
       .insert({
         name: formData.name,
-        description: formData.description,
-        start_date: formData.startDate,
-        end_date: formData.endDate,
+        description: "",
+        start_date: 0,
+        end_date: Date.now() + 86400 * 365,
         visibility: formData.visibility,
         reward_per_question: formData.rewardPerQuestion,
         reward_token: formData.rewardToken,
-        user_eligibility: formData.userEligibility || "All",
+        user_eligibility: "All",
         status: formData.paymentData ? "active" : "draft", // Active if funded, draft otherwise
       })
       .select()

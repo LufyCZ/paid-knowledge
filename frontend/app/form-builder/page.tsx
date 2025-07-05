@@ -931,8 +931,6 @@ function PaymentStepPage({
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
-    startDate: string;
-    endDate: string;
     userEligibility: "Orb" | "Device" | "All";
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -974,19 +972,10 @@ function PaymentStepPage({
       const createFormData: CreateFormData = {
         name: formData.name,
         description: formData.description,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
         visibility: "Public", // Always public
         rewardPerQuestion: payment.rewardPerQuestion,
         rewardToken: payment.token,
-        userEligibility: formData.userEligibility,
-        questions: questions.map((q, index) => ({
-          id: index, // Use index as ID for CreateFormData
-          title: q.label,
-          description: "", // Form entry schema doesn't have description
-          type: q.type,
-          options: [], // Form entry schema doesn't have options for these types
-        })),
+        questions: [],
         paymentData: {
           amount: payment.amount,
           transactionId: payment.transactionId,
@@ -997,7 +986,18 @@ function PaymentStepPage({
       const result = await createBountyForm(createFormData);
 
       if (result.success) {
-        console.log("Quest created successfully:", result.form);
+        await createFormMutation.mutateAsync({
+          transactionId: payment.transactionId,
+          question: {
+            title: formData.name,
+            description: formData.description,
+            form: questions,
+            reward: {
+              amount: String(payment.amount),
+              currency: payment.token,
+            },
+          },
+        });
 
         // Clear saved quest data
         localStorage.removeItem("pendingFormData");
@@ -1014,19 +1014,6 @@ function PaymentStepPage({
         setError(result.error || "Failed to create quest");
         setShowPaymentModal(true); // Show payment modal again
       }
-
-      await createFormMutation.mutateAsync({
-        transactionId: payment.transactionId,
-        question: {
-          title: formData.name,
-          description: formData.description,
-          form: questions,
-          reward: {
-            amount: String(payment.amount),
-            currency: payment.token,
-          },
-        },
-      });
     } catch (err) {
       console.error("Error creating quest:", err);
       setError("An unexpected error occurred. Please try again.");
@@ -1083,20 +1070,6 @@ function PaymentStepPage({
                   <p className="text-gray-900">{formData.description}</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm font-medium text-gray-600">
-                    Start Date:
-                  </span>
-                  <p className="text-gray-900">{formData.startDate}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">
-                    End Date:
-                  </span>
-                  <p className="text-gray-900">{formData.endDate}</p>
-                </div>
-              </div>
               <div>
                 <span className="text-sm font-medium text-gray-600">
                   Questions:
