@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 const FILTER_OPTIONS = [
   { id: "all", label: "All" },
   { id: "photo", label: "Photo" },
-  { id: "form", label: "Form" },
+  { id: "survey", label: "Survey" },
 ];
 
 export default function HomePage() {
@@ -90,7 +90,7 @@ export default function HomePage() {
           <div className="flex items-center space-x-2">
             <span
               className={`px-3 py-1 rounded-full text-sm font-medium ${
-                form.type === "Form"
+                form.type === "Survey"
                   ? "bg-purple-100 text-purple-700"
                   : "bg-blue-100 text-blue-700"
               }`}
@@ -155,9 +155,7 @@ export default function HomePage() {
         <div className="min-h-screen bg-gray-50 pb-20">
           <div className="bg-white border-b border-gray-200 px-4 py-4">
             <div className="flex items-center justify-between">
-              <h1 className="text-xl font-bold text-gray-900">
-                Paid Knowledge
-              </h1>
+              <h1 className="text-xl font-bold text-gray-900">Questy</h1>
               <div className="bg-gray-200 rounded-full px-4 py-2">
                 <span className="text-sm text-gray-600">+ Create</span>
               </div>
@@ -175,7 +173,7 @@ export default function HomePage() {
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">Paid Knowledge</h1>
+            <h1 className="text-xl font-bold text-gray-900">Questy</h1>
             <Link href="/form-builder">
               <Button
                 size="sm"

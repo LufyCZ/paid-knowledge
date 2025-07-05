@@ -28,14 +28,14 @@ type Question = {
   options?: string[]; // for choice types
 };
 
-type BuilderType = "form" | "photo" | null;
+type BuilderType = "survey" | "photo" | null;
 
 export default function FormBuilder() {
   const [selectedType, setSelectedType] = useState<BuilderType>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [insertIndex, setInsertIndex] = useState<number | undefined>(undefined);
-  const [showFormSetup, setShowFormSetup] = useState(false);
+  const [showQuestSetup, setShowQuestSetup] = useState(false);
   const [showPaymentStep, setShowPaymentStep] = useState(false);
 
   const openTypeMenu = (index?: number) => {
@@ -122,13 +122,15 @@ export default function FormBuilder() {
         <div className="px-4 py-8 max-w-md mx-auto">
           <div className="space-y-4">
             <div
-              onClick={() => setSelectedType("form")}
+              onClick={() => setSelectedType("survey")}
               className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300"
             >
               <div className="flex items-center space-x-4">
                 <div className="text-4xl">📝</div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Form</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Survey
+                  </h3>
                   <p className="text-gray-600 text-sm">
                     Create surveys and questionnaires with multiple question
                     types
@@ -171,7 +173,7 @@ export default function FormBuilder() {
             ← Back
           </Button>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            Create Your Bounty Form
+            Create Your Bounty Quest
           </h1>
         </div>
       </div>
@@ -200,7 +202,7 @@ export default function FormBuilder() {
               No questions yet
             </h2>
             <p className="text-gray-500 mb-6">
-              Start building your form by adding your first question
+              Start building your quest by adding your first question
             </p>
           </div>
         )}
@@ -218,10 +220,10 @@ export default function FormBuilder() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-20">
           <div className="max-w-2xl mx-auto">
             <button
-              onClick={() => setShowFormSetup(true)}
+              onClick={() => setShowQuestSetup(true)}
               className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
             >
-              💾 Save Form ({questions.length} question
+              💾 Save Quest ({questions.length} question
               {questions.length !== 1 ? "s" : ""})
             </button>
           </div>
@@ -287,11 +289,11 @@ export default function FormBuilder() {
         </div>
       )}
 
-      {/* Form Setup Modal */}
-      {showFormSetup && (
-        <FormSetupPage
+      {/* Quest Setup Modal */}
+      {showQuestSetup === true && (
+        <QuestSetupPage
           questions={questions}
-          onBack={() => setShowFormSetup(false)}
+          onBack={() => setShowQuestSetup(false)}
           onContinueToPayment={(formData: {
             name: string;
             description: string;
@@ -299,9 +301,9 @@ export default function FormBuilder() {
             endDate: string;
             userEligibility: "Orb" | "Device" | "All";
           }) => {
-            // Save form data to localStorage for the payment step
+            // Save quest data to localStorage for the payment step
             localStorage.setItem("pendingFormData", JSON.stringify(formData));
-            setShowFormSetup(false);
+            setShowQuestSetup(false);
             setShowPaymentStep(true);
           }}
         />
@@ -313,7 +315,7 @@ export default function FormBuilder() {
           questions={questions}
           onBack={() => {
             setShowPaymentStep(false);
-            setShowFormSetup(true);
+            setShowQuestSetup(true);
           }}
         />
       )}
@@ -515,7 +517,7 @@ function ChoiceOptionEditor({
   );
 }
 
-function FormSetupPage({
+function QuestSetupPage({
   questions,
   onBack,
   onContinueToPayment,
@@ -555,7 +557,7 @@ function FormSetupPage({
     }
 
     if (questions.length === 0) {
-      setError("Please add at least one question to your form.");
+      setError("Please add at least one question to your quest.");
       return;
     }
 
@@ -581,16 +583,16 @@ function FormSetupPage({
             ←
           </button>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            Form Setup
+            Quest Setup
           </h1>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto pb-24">
-        {/* Form Preview */}
+        {/* Quest Preview */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <h3 className="font-semibold text-gray-900 mb-2">Form Preview</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">Quest Preview</h3>
           <p className="text-sm text-gray-600">
             {questions.length} question
             {questions.length !== 1 ? "s" : ""} created
@@ -609,9 +611,9 @@ function FormSetupPage({
           </div>
         </div>
 
-        {/* Form Details */}
+        {/* Quest Details */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Form Details</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Quest Details</h3>
 
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -633,7 +635,7 @@ function FormSetupPage({
                       Wallet Required
                     </p>
                     <p className="text-xs text-yellow-700">
-                      Connect your wallet to fund the form
+                      Connect your wallet to fund the quest
                     </p>
                   </div>
                 </div>
@@ -649,11 +651,11 @@ function FormSetupPage({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Form Name *
+              Quest Name *
             </label>
             <input
               type="text"
-              placeholder="Enter form name..."
+              placeholder="Enter quest name..."
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
@@ -665,7 +667,7 @@ function FormSetupPage({
               Description
             </label>
             <textarea
-              placeholder="Describe your bounty form..."
+              placeholder="Describe your bounty quest..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -725,14 +727,16 @@ function FormSetupPage({
             </p>
           </div>
 
-          {/* Form will be public info */}
+          {/* Quest will be public info */}
           <div className="p-4 bg-blue-50 rounded-lg">
             <div className="flex items-center space-x-2">
               <span className="text-blue-600">🌍</span>
               <div>
-                <p className="text-sm font-medium text-blue-800">Public Form</p>
+                <p className="text-sm font-medium text-blue-800">
+                  Public Quest
+                </p>
                 <p className="text-xs text-blue-600">
-                  Your form will be publicly accessible and anyone can
+                  Your quest will be publicly accessible and anyone can
                   participate to earn rewards
                 </p>
               </div>
@@ -779,7 +783,7 @@ function PaymentStepPage({
   const router = useRouter();
   const { isConnected } = useWallet();
 
-  // Get form data from localStorage or previous step
+  // Get quest data from localStorage or previous step
   React.useEffect(() => {
     const savedFormData = localStorage.getItem("pendingFormData");
     if (savedFormData) {
@@ -799,7 +803,7 @@ function PaymentStepPage({
     setError(null);
 
     if (!formData) {
-      setError("Form data is missing. Please go back and try again.");
+      setError("Quest data is missing. Please go back and try again.");
       return;
     }
 
@@ -830,9 +834,9 @@ function PaymentStepPage({
       const result = await createBountyForm(createFormData);
 
       if (result.success) {
-        console.log("Form created successfully:", result.form);
+        console.log("Quest created successfully:", result.form);
 
-        // Clear saved form data
+        // Clear saved quest data
         localStorage.removeItem("pendingFormData");
 
         // Redirect directly to success page
@@ -844,11 +848,11 @@ function PaymentStepPage({
           }`
         );
       } else {
-        setError(result.error || "Failed to create form");
+        setError(result.error || "Failed to create quest");
         setShowPaymentModal(true); // Show payment modal again
       }
     } catch (err) {
-      console.error("Error creating form:", err);
+      console.error("Error creating quest:", err);
       setError("An unexpected error occurred. Please try again.");
       setShowPaymentModal(true); // Show payment modal again
     } finally {
@@ -874,17 +878,17 @@ function PaymentStepPage({
             ←
           </button>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            Fund Your Form
+            Fund Your Quest
           </h1>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
-        {/* Form Summary */}
+        {/* Quest Summary */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Form Summary
+            Quest Summary
           </h3>
 
           {formData && (

@@ -1,4 +1,4 @@
--- Supabase SQL Schema for Paid Knowledge Bounty Forms
+-- Supabase SQL Schema for Questy Bounty Quests
 -- Run this in your Supabase SQL Editor
 
 -- Enable UUID extension

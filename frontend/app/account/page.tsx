@@ -335,11 +335,12 @@ export default function AccountPage() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                        {" "}
                         <div className="text-2xl font-bold text-blue-700">
                           {profile.forms_created_count}
                         </div>
                         <div className="text-sm text-blue-600 font-medium">
-                          Forms Created
+                          Quests Created
                         </div>
                       </div>
                       <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
@@ -347,18 +348,19 @@ export default function AccountPage() {
                           {profile.forms_submitted_count}
                         </div>
                         <div className="text-sm text-green-600 font-medium">
-                          Forms Submitted
+                          Quests Submitted
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+                        {" "}
                         <div className="text-2xl font-bold text-purple-700">
                           {profile.forms_accepted_count}
                         </div>
                         <div className="text-sm text-purple-600 font-medium">
-                          Forms Accepted
+                          Quests Accepted
                         </div>
                       </div>
                       <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
@@ -399,10 +401,10 @@ export default function AccountPage() {
                 <div className="mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">
                     World ID Verification
-                  </h2>
+                  </h2>{" "}
                   <p className="text-gray-600">
-                    Verify your identity with World ID to access exclusive forms
-                    and features
+                    Verify your identity with World ID to access exclusive
+                    quests and features
                   </p>
                 </div>
 
@@ -509,16 +511,17 @@ export default function AccountPage() {
                   Quick Actions
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Link href="/form-builder" className="block">
+                  {" "}
+                  <Link href="/" className="block">
                     <Button variant="outline" className="w-full h-12 text-base">
                       <span className="mr-2">➕</span>
-                      Create New Form
+                      Create New Quest
                     </Button>
                   </Link>
-                  <Link href="/forms" className="block">
+                  <Link href="/" className="block">
                     <Button variant="outline" className="w-full h-12 text-base">
                       <span className="mr-2">📝</span>
-                      Browse Forms
+                      Browse Quests
                     </Button>
                   </Link>
                 </div>

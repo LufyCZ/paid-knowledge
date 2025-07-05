@@ -3,7 +3,7 @@ import { supabase, type BountyForm } from "@/lib/supabase";
 
 export interface FormData {
   id: string;
-  type: "Form" | "Photo";
+  type: "Survey" | "Photo";
   title: string;
   description: string;
   reward: string;
@@ -34,7 +34,7 @@ export function useForms() {
       form.description?.toLowerCase().includes("photo") ||
       form.name.toLowerCase().includes("photo")
         ? "Photo"
-        : "Form";
+        : "Survey";
 
     // Extract location from description if it's a photo type
     const location =
@@ -44,7 +44,7 @@ export function useForms() {
 
     // Calculate estimated duration based on questions count (simplified)
     const duration =
-      type === "Form" ? calculateEstimatedDuration(form) : undefined;
+      type === "Survey" ? calculateEstimatedDuration(form) : undefined;
 
     return {
       id: form.id,

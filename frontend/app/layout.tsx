@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Paid Knowledge Platform",
-  description: "Earn rewards by completing forms and surveys",
+  title: "Questy",
+  description: "Earn rewards by completing quests and surveys",
 };
 
 export default function RootLayout({
