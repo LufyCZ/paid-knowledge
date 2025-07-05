@@ -4,6 +4,7 @@ import { createContext, publicProcedure } from '../trpc';
 import z from 'zod';
 import { questionSchema } from '@/lib/questions';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
+import { fromHex } from 'viem';
 
 function handler(req: Request) {
   return fetchRequestHandler({
@@ -20,7 +21,7 @@ export const questionsGet = publicProcedure.query(async ({ ctx }) => {
     address: bountyManagerAddress,
     abi: bountyManagerAbi,
     functionName: 'getAllOpenBounties',
-  }).then((result) => result.map((id) => Buffer.from(id, 'hex').toString()))
+  }).then((result) => result.map((id) => fromHex(id, 'string')))
 
   const questions = await Promise.allSettled(
     blobIds.map(async (blobId) => {

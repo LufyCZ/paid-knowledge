@@ -4,7 +4,7 @@ import { createContext, publicProcedure } from '../trpc';
 import { hashQuestion, questionSchema } from '@/lib/questions';
 import z from 'zod';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
-import { Address, Hex, maxUint256 } from 'viem';
+import { Address, Hex, maxUint256, toHex } from 'viem';
 
 function handler(req: Request) {
   return fetchRequestHandler({
@@ -66,7 +66,7 @@ export const questionCreate = publicProcedure
       address: bountyManagerAddress,
       abi: bountyManagerAbi,
       functionName: 'dataHashToBountyId',
-      args: [Buffer.from(formHash, 'utf-8').toString("hex") as Hex],
+      args: [toHex(formHash)],
     }).catch(() => null);
 
     if (existingQuestion) {
@@ -93,7 +93,7 @@ export const questionCreate = publicProcedure
       address: bountyManagerAddress,
       abi: bountyManagerAbi,
       functionName: 'createBounty',
-      args: [Buffer.from(blob.blobId, 'utf-8').toString("hex") as Hex, payment.fromWalletAddress, paymentToken, amountPerAnswer, BigInt(payment.inputTokenAmount), maxUint256, Buffer.from(formHash, 'utf-8').toString("hex") as Hex],
+      args: [toHex(blob.blobId), payment.fromWalletAddress, paymentToken, amountPerAnswer, BigInt(payment.inputTokenAmount), maxUint256, Buffer.from(formHash, 'utf-8').toString("hex") as Hex],
     })
 
     return {

@@ -1,4 +1,4 @@
-import { createWalletClient, Hex, http, publicActions } from 'viem'
+import { createWalletClient, Hex, http, publicActions, } from 'viem'
 import { worldchain } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 
@@ -26,6 +26,16 @@ export const bountyManagerAbi = [
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "AnswerIdAlreadyExists",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "AnswerIdDoesNotExist",
+    "type": "error"
   },
   {
     "inputs": [],
@@ -150,6 +160,29 @@ export const bountyManagerAbi = [
     "inputs": [
       {
         "internalType": "bytes",
+        "name": "bountyId",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes",
+        "name": "answerId",
+        "type": "bytes"
+      },
+      {
+        "internalType": "address",
+        "name": "answerer",
+        "type": "address"
+      }
+    ],
+    "name": "answerBounty",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
         "name": "",
         "type": "bytes"
       }
@@ -190,6 +223,35 @@ export const bountyManagerAbi = [
         "internalType": "bool",
         "name": "isActive",
         "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "bountyIdToAnswers",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "answerId",
+        "type": "bytes"
+      },
+      {
+        "internalType": "address",
+        "name": "answerer",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -460,9 +522,9 @@ export const bountyManagerAbi = [
         "type": "bytes"
       },
       {
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
+        "internalType": "bytes",
+        "name": "answerId",
+        "type": "bytes"
       }
     ],
     "name": "payoutBounty",
@@ -478,9 +540,9 @@ export const bountyManagerAbi = [
         "type": "bytes[]"
       },
       {
-        "internalType": "address[]",
-        "name": "recipients",
-        "type": "address[]"
+        "internalType": "bytes[]",
+        "name": "answerIds",
+        "type": "bytes[]"
       }
     ],
     "name": "payoutBountyBatch",

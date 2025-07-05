@@ -3,6 +3,8 @@ import { appRouter } from '../..';
 import { createContext, publicProcedure } from '../../trpc';
 import z from 'zod';
 import { answerSchema } from '@/lib/answers';
+import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
+import { Address, fromHex, Hex, toHex } from 'viem';
 
 function handler(req: Request) {
   return fetchRequestHandler({
@@ -15,10 +17,12 @@ function handler(req: Request) {
 
 export const answerCreate = publicProcedure.input(z.object({ answer: answerSchema })).query(async ({ ctx, input }) => {
   // Check if the user has already answered this question
-  // TODO: az bude kontrakt :D
-  if (false) {
-    throw new Error("You have already answered this question");
-  }
+  const blobIds = await client.readContract({
+    address: bountyManagerAddress,
+    abi: bountyManagerAbi,
+    functionName: 'bountyIdToAnswers',
+    args: [toHex(input.answer.questionId), BigInt()],
+  }).then((result) => result.map((id) => fromHex(id, 'string')))
 
   const file = new TextEncoder().encode(JSON.stringify(input.answer));
   const blob = await ctx.walrusClient.writeBlob({
@@ -29,7 +33,16 @@ export const answerCreate = publicProcedure.input(z.object({ answer: answerSchem
   })
 
   // Add the blob id to the question's answers onchain, including the payment
-  // TODO: az bude kontrakt a auth nejak :D
+  await client.writeContract({
+    address: bountyManagerAddress,
+    abi: bountyManagerAbi,
+    functionName: 'answerBounty',
+    args: [
+      toHex(input.answer.questionId),
+      toHex(blob.blobId),
+      input.answer.answererAddress as Address,
+    ],
+  })
 
   return blob
 })
