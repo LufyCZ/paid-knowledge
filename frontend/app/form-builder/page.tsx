@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { createBountyForm, CreateFormData } from "../../lib/forms";
 import { useWallet } from "../../hooks/useWallet";
 import { PaymentModal } from "../../components/PaymentModal";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const QUESTION_TYPES = [
   { name: "Short Text", icon: "📝", description: "Brief text response" },
@@ -26,7 +28,10 @@ type Question = {
   options?: string[]; // for choice types
 };
 
+type BuilderType = "form" | "photo" | null;
+
 export default function FormBuilder() {
+  const [selectedType, setSelectedType] = useState<BuilderType>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [insertIndex, setInsertIndex] = useState<number | undefined>(undefined);
@@ -91,13 +96,84 @@ export default function FormBuilder() {
     );
   };
 
+  // If no type is selected, show type selection
+  if (!selectedType) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header with back button */}
+        <div className="bg-white shadow-sm border-b px-4 py-3">
+          <div className="flex items-center">
+            <Link href="/">
+              <Button
+                variant="outline"
+                size="sm"
+                className="mr-4 flex items-center"
+              >
+                ← Back
+              </Button>
+            </Link>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Choose Builder Type
+            </h1>
+          </div>
+        </div>
+
+        {/* Type Selection */}
+        <div className="px-4 py-8 max-w-md mx-auto">
+          <div className="space-y-4">
+            <div
+              onClick={() => setSelectedType("form")}
+              className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="text-4xl">📝</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Form</h3>
+                  <p className="text-gray-600 text-sm">
+                    Create surveys and questionnaires with multiple question
+                    types
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm border opacity-60 cursor-not-allowed">
+              <div className="flex items-center space-x-4">
+                <div className="text-4xl">📸</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Photo</h3>
+                  <p className="text-gray-600 text-sm">
+                    Create photo collection tasks and challenges
+                  </p>
+                  <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full mt-2">
+                    Coming Soon
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 relative">
-      {/* Header */}
+      {/* Header with back button */}
       <div className="bg-white shadow-sm border-b px-4 py-3 sticky top-0 z-10">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-          Create Your Bounty Form
-        </h1>
+        <div className="flex items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            className="mr-4 flex items-center"
+            onClick={() => setSelectedType(null)}
+          >
+            ← Back
+          </Button>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Create Your Bounty Form
+          </h1>
+        </div>
       </div>
 
       {/* Main Content */}

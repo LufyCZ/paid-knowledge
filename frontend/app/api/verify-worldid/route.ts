@@ -91,38 +91,55 @@ export async function POST(request: NextRequest) {
       updateData.verification_level = "Orb";
     }
 
-    // Upsert user profile
-    const { data: updatedProfile, error: updateError } = await supabase
-      .from("user_profiles")
-      .upsert({
-        wallet_address: walletAddress.toLowerCase(),
-        verification_level:
-          updateData.verification_level ||
-          existingProfile?.verification_level ||
-          "None",
-        device_verified_at:
-          updateData.device_verified_at || existingProfile?.device_verified_at,
-        orb_verified_at:
-          updateData.orb_verified_at || existingProfile?.orb_verified_at,
-        notifications_enabled: existingProfile?.notifications_enabled ?? true,
-        total_rewards_earned: existingProfile?.total_rewards_earned || 0,
-        total_rewards_usdc: existingProfile?.total_rewards_usdc || 0,
-        total_rewards_wld: existingProfile?.total_rewards_wld || 0,
-        forms_created_count: existingProfile?.forms_created_count || 0,
-        forms_submitted_count: existingProfile?.forms_submitted_count || 0,
-        forms_accepted_count: existingProfile?.forms_accepted_count || 0,
-        username: existingProfile?.username,
-        updated_at: now,
-      })
-      .select()
-      .single();
+    // Update or create user profile
+    let updatedProfile;
 
-    if (updateError) {
-      console.error("Error updating profile:", updateError);
-      return NextResponse.json(
-        { error: "Failed to update profile" },
-        { status: 500 }
-      );
+    if (existingProfile) {
+      // Profile exists, update it
+      const { data, error: updateError } = await supabase
+        .from("user_profiles")
+        .update(updateData)
+        .eq("wallet_address", walletAddress.toLowerCase())
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Error updating profile:", updateError);
+        return NextResponse.json(
+          { error: "Failed to update profile" },
+          { status: 500 }
+        );
+      }
+      updatedProfile = data;
+    } else {
+      // Profile doesn't exist, create it
+      const { data, error: createError } = await supabase
+        .from("user_profiles")
+        .insert({
+          wallet_address: walletAddress.toLowerCase(),
+          verification_level: updateData.verification_level || "Device",
+          device_verified_at: updateData.device_verified_at,
+          orb_verified_at: updateData.orb_verified_at,
+          notifications_enabled: true,
+          total_rewards_earned: 0,
+          total_rewards_usdc: 0,
+          total_rewards_wld: 0,
+          forms_created_count: 0,
+          forms_submitted_count: 0,
+          forms_accepted_count: 0,
+          updated_at: now,
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Error creating profile:", createError);
+        return NextResponse.json(
+          { error: "Failed to create profile" },
+          { status: 500 }
+        );
+      }
+      updatedProfile = data;
     }
 
     return NextResponse.json({

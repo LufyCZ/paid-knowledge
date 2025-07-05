@@ -18,14 +18,8 @@ import Link from "next/link";
 export default function AccountPage() {
   const { isConnected, address, connect, worldchainUsername } = useWallet();
   const { installed } = useMiniKit();
-  const {
-    profile,
-    verificationHistory,
-    isLoading,
-    error,
-    refreshProfile,
-    updateProfile,
-  } = useProfile();
+  const { profile, isLoading, error, refreshProfile, updateProfile } =
+    useProfile();
 
   // World ID verification hooks
   const deviceVerification = useWorldIdVerification({
@@ -215,7 +209,7 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-8 pb-28">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -488,43 +482,6 @@ export default function AccountPage() {
                 </div>
               )}
             </div>
-
-            {/* Verification History */}
-            {verificationHistory.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  Verification History
-                </h2>
-                <div className="space-y-3">
-                  {verificationHistory.map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
-                          <span className="text-lg">
-                            {log.verification_type === "Orb" ? "🔮" : "📱"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-900">
-                            {log.verification_type} Verification
-                          </span>
-                          <div className="text-sm text-gray-600">
-                            {new Date(log.verified_at).toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 self-start sm:self-center">
-                        <span className="mr-1">✅</span>
-                        Completed
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Quick Actions */}
             <div className="bg-white rounded-xl shadow-sm border p-6">

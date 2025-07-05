@@ -6,7 +6,6 @@ import { useWallet } from "./useWallet";
 
 interface UseProfileReturn {
   profile: UserProfile | null;
-  verificationHistory: VerificationLog[];
   isLoading: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
@@ -16,9 +15,6 @@ interface UseProfileReturn {
 export const useProfile = (): UseProfileReturn => {
   const { address: walletAddress, isConnected } = useWallet();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [verificationHistory, setVerificationHistory] = useState<
-    VerificationLog[]
-  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +37,6 @@ export const useProfile = (): UseProfileReturn => {
   const fetchProfile = async () => {
     if (!walletAddress || !isConnected) {
       setProfile(null);
-      setVerificationHistory([]);
       return;
     }
 
@@ -59,7 +54,6 @@ export const useProfile = (): UseProfileReturn => {
 
       const data = await response.json();
       setProfile(data.profile);
-      setVerificationHistory(data.verificationHistory || []);
 
       // Cache profile in localStorage
       localStorage.setItem(
@@ -121,7 +115,6 @@ export const useProfile = (): UseProfileReturn => {
 
   return {
     profile,
-    verificationHistory,
     isLoading,
     error,
     refreshProfile: fetchProfile,

@@ -30,7 +30,11 @@ export const useWorldIdVerification = ({
   });
 
   const worldId = useWorldId({
-    action: verificationType === "Device" ? "verify-device" : "verify-orb",
+    action:
+      verificationType === "Device"
+        ? "device-verification"
+        : "orb-verification",
+    signal: address || undefined, // Use wallet address as signal
     verification_level:
       verificationType === "Device"
         ? VerificationLevel.Device
@@ -70,13 +74,15 @@ export const useWorldIdVerification = ({
           walletAddress: address,
           verificationType,
           worldIdPayload: {
-            // In a real implementation, this would contain the actual World ID payload
-            // For now, we're using a placeholder since the verification was successful
             verified: true,
             timestamp: new Date().toISOString(),
+            verification_level: verificationType,
           },
           actionId:
-            verificationType === "Device" ? "verify-device" : "verify-orb",
+            verificationType === "Device"
+              ? "device-verification"
+              : "orb-verification",
+          signal: address, // Include signal parameter
         }),
       });
 

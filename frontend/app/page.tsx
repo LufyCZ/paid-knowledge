@@ -1,97 +1,263 @@
-import Verify from "../components/Verify";
-import WalletAuth from "../components/WalletAuth";
-import Camera from "../components/Camera";
-import Location from "../components/Location";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useWallet } from "@/hooks/useWallet";
+import { useForms, type FormData } from "@/hooks/useForms";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
-export default function Home() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto text-center">
-          {/* Header */}
-          <div className="mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Paid Knowledge Platform
-            </h1>
+const FILTER_OPTIONS = [
+  { id: "all", label: "All" },
+  { id: "photo", label: "Photo" },
+  { id: "form", label: "Form" },
+];
+
+export default function HomePage() {
+  const { isConnected } = useWallet();
+  const { featuredForms, allForms, isLoading, error } = useForms();
+  const [selectedFilter, setSelectedFilter] = useState("all");
+  const [isClient, setIsClient] = useState(false);
+
+  // Prevent hydration mismatch by only rendering after client mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const filteredForms =
+    selectedFilter === "all"
+      ? allForms
+      : allForms.filter((form) => form.category === selectedFilter);
+
+  // Helper function to get eligibility badge
+  const getEligibilityBadge = (eligibility: string) => {
+    switch (eligibility) {
+      case "Orb":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+            Orb
+          </span>
+        );
+      case "Device":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+            Device
+          </span>
+        );
+      case "All":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+            All
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+            All
+          </span>
+        );
+    }
+  };
+
+  // Helper function to format date (hydration-safe)
+  const formatEndDate = (dateString: string) => {
+    const date = new Date(dateString);
+    // Use UTC to ensure consistent rendering on server and client
+    const month = date.toLocaleDateString("en-US", {
+      month: "short",
+      timeZone: "UTC",
+    });
+    const day = date.getUTCDate();
+    return `${month} ${day}`;
+  };
+
+  const FormCard = ({
+    form,
+    isFeatured = false,
+  }: {
+    form: FormData;
+    isFeatured?: boolean;
+  }) => (
+    <Link href={`/form/${form.id}`} className="block">
+      <div
+        className={`bg-white rounded-xl p-4 shadow-sm border hover:shadow-md transition-shadow ${
+          isFeatured ? "min-h-[200px]" : ""
+        }`}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center space-x-2">
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                form.type === "Form"
+                  ? "bg-purple-100 text-purple-700"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {form.type}
+            </span>
+            <span className="text-lg font-semibold text-gray-900">
+              {form.reward}
+            </span>
           </div>
+          {isFeatured && (
+            <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
+              Featured
+            </span>
+          )}
+        </div>
 
-          {/* Menu */}
-          <div className="mb-8 flex flex-wrap justify-center items-center gap-4">
-            <Link
-              href="/forms"
-              className="inline-block bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
-            >
-              📝 Browse Forms
-            </Link>
+        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+          {form.title}
+        </h3>
 
-            <Link
-              href="/form-builder"
-              className="inline-block bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
-            >
-              ➕ Create New Form
-            </Link>
+        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+          {form.description}
+        </p>
 
-            <Link
-              href="/account"
-              className="inline-block bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
-            >
-              👤 My Account
-            </Link>
-
-            <Link
-              href="/payment-test"
-              className="inline-block bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-6 py-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-150 touch-manipulation"
-            >
-              🛠️ Payment Test
-            </Link>
-          </div>
-
-          {/* Authentication Section */}
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            {/* Wallet Connection */}
-            <WalletAuth />
-
-            {/* World ID Verification */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-              <div className="mb-4">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <svg
-                    className="w-6 h-6 text-blue-600 dark:text-blue-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
-                  World ID Verification
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-center text-sm">
-                  Prove you're a unique human with World ID.
-                </p>
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center space-x-3">
+            {form.duration && (
+              <div className="flex items-center">
+                <span className="w-4 h-4 mr-1">⏱️</span>
+                {form.duration}
               </div>
-              <Verify />
+            )}
+            {form.location && (
+              <div className="flex items-center">
+                <span className="w-4 h-4 mr-1">📍</span>
+                {form.location}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <div
+              className="flex items-center"
+              title={`Eligible: ${form.eligibility}`}
+            >
+              {getEligibilityBadge(form.eligibility)}
+            </div>
+            <div className="flex items-center">
+              <span className="w-4 h-4 mr-1">📅</span>
+              {formatEndDate(form.endDate)}
             </div>
           </div>
-
-          {/* Location Info */}
-          <Location />
-
-          {/* Camera Feed */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 text-center">
-              Camera Feed
-            </h3>
-            <Camera />
-          </div>
         </div>
+      </div>
+    </Link>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900">Paid Knowledge</h1>
+          <Link href="/form-builder">
+            <Button
+              size="sm"
+              className="bg-black text-white hover:bg-gray-800 rounded-full px-4"
+            >
+              + Create
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="px-4 py-6 space-y-6">
+        {/* Show loading until client is mounted to prevent hydration issues */}
+        {!isClient || isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-800 text-sm">
+              Failed to load forms: {error}
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Featured Section */}
+            <section>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Featured
+              </h2>
+              {featuredForms.length > 0 ? (
+                <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2">
+                  {featuredForms.map((form) => (
+                    <div key={form.id} className="flex-shrink-0 w-64">
+                      <FormCard form={form} isFeatured={true} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  No featured forms available
+                </div>
+              )}
+            </section>
+
+            {/* Explore Section */}
+            <section>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Explore
+              </h2>
+
+              {/* Filter Tabs */}
+              <div className="flex space-x-2 mb-4 overflow-x-auto scrollbar-hide pb-2">
+                {FILTER_OPTIONS.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setSelectedFilter(filter.id)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                      selectedFilter === filter.id
+                        ? "bg-black text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Forms Grid */}
+              {filteredForms.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filteredForms.map((form) => (
+                    <FormCard key={form.id} form={form} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  No forms available for the selected filter
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+        {/* Connection Prompt for Non-Connected Users */}
+        {!isConnected && (
+          <div className="fixed bottom-24 left-4 right-4 bg-blue-600 text-white p-4 rounded-xl shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">Connect to earn rewards</h3>
+                <p className="text-sm text-blue-100">
+                  Connect your wallet to start earning from forms
+                </p>
+              </div>
+              <Link href="/account">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-white text-blue-600 hover:bg-gray-100 border-white"
+                >
+                  Connect
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

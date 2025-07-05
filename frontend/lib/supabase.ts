@@ -24,6 +24,7 @@ export interface Database {
           updated_at: string;
           status: "draft" | "active" | "completed" | "cancelled";
           user_eligibility: "Orb" | "Device" | "All";
+          featured: boolean;
         };
         Insert: {
           id?: string;
@@ -39,6 +40,7 @@ export interface Database {
           updated_at?: string;
           status?: "draft" | "active" | "completed" | "cancelled";
           user_eligibility?: "Orb" | "Device" | "All";
+          featured?: boolean;
         };
         Update: {
           id?: string;
@@ -54,6 +56,7 @@ export interface Database {
           updated_at?: string;
           status?: "draft" | "active" | "completed" | "cancelled";
           user_eligibility?: "Orb" | "Device" | "All";
+          featured?: boolean;
         };
       };
       form_questions: {

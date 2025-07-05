@@ -13,22 +13,30 @@ interface IRequestPayload {
 
 export async function POST(req: NextRequest) {
   const { payload, action, signal } = (await req.json()) as IRequestPayload;
-  const app_id = process.env.NEXT_PUBLIC_APP_ID as `app_${string}`;
+  const app_id = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID as `app_${string}`;
+
+  if (!app_id) {
+    console.error("Missing NEXT_PUBLIC_WORLDCOIN_APP_ID environment variable");
+    return NextResponse.json({
+      error: "Server configuration error",
+      status: 500,
+    });
+  }
+
+  console.log("Verifying with:", { app_id, action, signal });
+
   const verifyRes = (await verifyCloudProof(
     payload,
     app_id,
     action,
     signal
-  )) as IVerifyResponse; // Wrapper on this
+  )) as IVerifyResponse;
 
   if (verifyRes.success) {
     console.log("Verification successful:", verifyRes);
-    // This is where you should perform backend actions if the verification succeeds
-    // Such as, setting a user as "verified" in a database
     return NextResponse.json({ verifyRes, status: 200 });
   } else {
-    // This is where you should handle errors from the World ID /verify endpoint.
-    // Usually these errors are due to a user having already verified.
+    console.error("Verification failed:", verifyRes);
     return NextResponse.json({ verifyRes, status: 400 });
   }
 }
