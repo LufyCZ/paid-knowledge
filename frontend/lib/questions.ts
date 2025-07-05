@@ -8,8 +8,7 @@ export const questionSchema = z.object({
   form: formSchema,
   reward: z.object({
     amount: z.string().describe("The amount of the reward that the user will receive for answering the question"),
-    currency: z.string(),
-    paymentTx: z.string()
+    currency: z.union([z.literal("USDC"), z.literal("WLD")]).describe("The currency of the reward"),
   }).optional()
 })
 
