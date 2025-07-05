@@ -74,8 +74,10 @@ function ConnectionManager() {
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
   const [installed, setInstalled] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     MiniKit.install();
     setInstalled(true);
 
@@ -83,6 +85,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
       eruda.default.init();
     });
   }, []);
+
+  // Don't render MiniKit-dependent components until client-side
+  if (!isClient) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <MiniKitContext.Provider value={{ installed: false }}>
+          {children}
+        </MiniKitContext.Provider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

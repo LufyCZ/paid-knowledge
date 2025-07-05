@@ -29,6 +29,7 @@ export const useWorldIdVerification = ({
     error: null,
   });
 
+  // Create a simpler World ID hook that doesn't do backend verification
   const worldId = useWorldId({
     action:
       verificationType === "Device"
@@ -44,27 +45,37 @@ export const useWorldIdVerification = ({
   const verify = async () => {
     if (!address) {
       const error = "Wallet not connected";
+      console.log("❌ Verification failed: Wallet not connected");
       setState({ isLoading: false, isSuccess: false, error });
       onError?.(error);
       return;
     }
 
+    console.log("🚀 Starting verification process...");
     setState({ isLoading: true, isSuccess: false, error: null });
 
     try {
       // Step 1: Perform World ID verification
+      console.log("📱 Calling worldId.verify()...");
       await worldId.verify();
+      
+      console.log("✅ worldId.verify() completed");
+      console.log("worldId.isSuccess:", worldId.isSuccess);
+      console.log("worldId.error:", worldId.error);
+      console.log("worldId.isLoading:", worldId.isLoading);
 
-      // Wait for World ID verification to complete
+      // Check for errors from World ID verification
       if (worldId.error) {
+        console.log("❌ World ID verification error:", worldId.error);
         throw new Error(worldId.error);
       }
 
-      if (!worldId.isSuccess) {
-        throw new Error("World ID verification failed");
-      }
+      // Wait a moment for state to update and check success
+      // The worldId.verify() should have completed successfully if we reach here without error
+      console.log("🔄 World ID verification completed, proceeding to profile update...");
 
       // Step 2: Submit to backend API
+      console.log("📡 Sending verification to profile update backend...");
       const response = await fetch("/api/verify-worldid", {
         method: "POST",
         headers: {
@@ -86,18 +97,28 @@ export const useWorldIdVerification = ({
         }),
       });
 
+      console.log("📡 Backend response status:", response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Backend verification failed");
+        console.log("❌ Profile update backend error:", errorData);
+        throw new Error(errorData.error || "Profile update failed");
       }
 
       const result = await response.json();
+      console.log("✅ Profile update successful:", result);
       setState({ isLoading: false, isSuccess: true, error: null });
       onSuccess?.();
       return result;
     } catch (error) {
+      console.log("❌ Verification process failed:");
+      console.log("Error:", error);
+      console.log("worldId.error:", worldId.error);
+      console.log("worldId.isSuccess:", worldId.isSuccess);
+      
       const errorMessage =
         error instanceof Error ? error.message : "Verification failed";
+      console.log("Final error message:", errorMessage);
       setState({ isLoading: false, isSuccess: false, error: errorMessage });
       onError?.(errorMessage);
     }

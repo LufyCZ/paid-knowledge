@@ -18,6 +18,7 @@ interface WalletState {
 
 export const useWallet = () => {
   const { installed } = useMiniKit();
+  const [isClient, setIsClient] = useState(false);
 
   // Load initial state from localStorage
   const loadStoredWalletData = () => {
@@ -40,7 +41,20 @@ export const useWallet = () => {
     };
   };
 
-  const [state, setState] = useState<WalletState>(loadStoredWalletData);
+  const [state, setState] = useState<WalletState>(() => ({
+    isConnected: false,
+    address: null,
+    worldchainUsername: null,
+    isLoading: false,
+    error: null,
+  }));
+
+  // Initialize client-side state
+  useEffect(() => {
+    setIsClient(true);
+    const storedData = loadStoredWalletData();
+    setState(storedData);
+  }, []);
 
   // Save wallet data to localStorage
   const saveWalletData = (walletData: Partial<WalletState>) => {

@@ -17,22 +17,28 @@ export const useProfile = (): UseProfileReturn => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Initialize client-side state
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Load profile from localStorage on mount
   useEffect(() => {
-    if (walletAddress) {
-      const cachedProfile = localStorage.getItem(
-        `profile_${walletAddress.toLowerCase()}`
-      );
-      if (cachedProfile) {
-        try {
-          setProfile(JSON.parse(cachedProfile));
-        } catch (err) {
-          console.error("Error parsing cached profile:", err);
-        }
+    if (!isClient || !walletAddress) return;
+
+    const cachedProfile = localStorage.getItem(
+      `profile_${walletAddress.toLowerCase()}`
+    );
+    if (cachedProfile) {
+      try {
+        setProfile(JSON.parse(cachedProfile));
+      } catch (err) {
+        console.error("Error parsing cached profile:", err);
       }
     }
-  }, [walletAddress]);
+  }, [walletAddress, isClient]);
 
   const fetchProfile = async () => {
     if (!walletAddress || !isConnected) {
@@ -110,8 +116,10 @@ export const useProfile = (): UseProfileReturn => {
 
   // Auto-fetch profile when wallet connects
   useEffect(() => {
-    fetchProfile();
-  }, [walletAddress, isConnected]);
+    if (isClient) {
+      fetchProfile();
+    }
+  }, [walletAddress, isConnected, isClient]);
 
   return {
     profile,
@@ -124,6 +132,8 @@ export const useProfile = (): UseProfileReturn => {
 
 // Helper functions for localStorage management
 export const clearProfileCache = (walletAddress?: string) => {
+  if (typeof window === "undefined") return; // Prevent SSR issues
+
   if (walletAddress) {
     localStorage.removeItem(`profile_${walletAddress.toLowerCase()}`);
   } else {

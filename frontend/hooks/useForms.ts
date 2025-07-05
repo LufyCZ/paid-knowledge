@@ -20,6 +20,12 @@ export function useForms() {
   const [allForms, setAllForms] = useState<FormData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Initialize client-side state
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Convert Supabase form to our display format
   const transformForm = (form: BountyForm): FormData => {
@@ -122,13 +128,15 @@ export function useForms() {
   };
 
   useEffect(() => {
-    fetchForms();
-  }, []);
+    if (isClient) {
+      fetchForms();
+    }
+  }, [isClient]);
 
   return {
     featuredForms,
     allForms,
-    isLoading,
+    isLoading: isLoading || !isClient, // Keep loading until client-side
     error,
     refreshForms: fetchForms,
   };
