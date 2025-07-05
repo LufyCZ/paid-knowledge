@@ -118,7 +118,7 @@ export function useForms() {
 
       // Split into featured and all forms
       const featured = transformedForms.filter((form) => form.featured);
-      const all = transformedForms.filter((form) => !form.featured);
+      const all = transformedForms; // Include ALL forms (both featured and non-featured)
 
       setFeaturedForms(featured);
       setAllForms(all);
