@@ -372,6 +372,37 @@ export const bountyManagerAbi = [
   {
     "inputs": [
       {
+        "internalType": "bytes",
+        "name": "bountyId",
+        "type": "bytes"
+      }
+    ],
+    "name": "getAnswersByBountyId",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bytes",
+            "name": "answerId",
+            "type": "bytes"
+          },
+          {
+            "internalType": "address",
+            "name": "answerer",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct BountyManager.AnswerData[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "owner",
         "type": "address"
@@ -458,6 +489,25 @@ export const bountyManagerAbi = [
         "internalType": "struct BountyManager.BountyData",
         "name": "",
         "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "dataHash",
+        "type": "bytes"
+      }
+    ],
+    "name": "getBountyIdByDataHash",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
       }
     ],
     "stateMutability": "view",

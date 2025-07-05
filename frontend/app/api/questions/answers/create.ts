@@ -4,7 +4,7 @@ import { createContext, publicProcedure } from '../../trpc';
 import z from 'zod';
 import { answerSchema } from '@/lib/answers';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
-import { Address, fromHex, Hex, toHex } from 'viem';
+import { Address, fromHex, toHex } from 'viem';
 
 function handler(req: Request) {
   return fetchRequestHandler({
@@ -17,13 +17,18 @@ function handler(req: Request) {
 
 export const answerCreate = publicProcedure.input(z.object({ answer: answerSchema })).query(async ({ ctx, input }) => {
   // Check if the user has already answered this question
-  const blobIds = await client.readContract({
+  const answers = await client.readContract({
     address: bountyManagerAddress,
     abi: bountyManagerAbi,
-    functionName: 'bountyIdToAnswers',
-    args: [toHex(input.answer.questionId), BigInt()],
-  }).then((result) => result.map((id) => fromHex(id, 'string')))
+    functionName: 'getAnswersByBountyId',
+    args: [toHex(input.answer.questionId)],
+  }).then((result) => result.map((r) => ({ answerId: fromHex(r.answerId, 'string'), answerer: r.answerer })))
 
+  if (answers.some((a) => a.answerer.toLowerCase() === input.answer.answererAddress.toLowerCase())) {
+    throw new Error('You have already answered this question');
+  }
+
+  // Upload the answer to Walrus
   const file = new TextEncoder().encode(JSON.stringify(input.answer));
   const blob = await ctx.walrusClient.writeBlob({
     blob: file,
@@ -32,7 +37,7 @@ export const answerCreate = publicProcedure.input(z.object({ answer: answerSchem
     signer: ctx.walrusSigner,
   })
 
-  // Add the blob id to the question's answers onchain, including the payment
+  // Add the blob id to the question's answers onchain
   await client.writeContract({
     address: bountyManagerAddress,
     abi: bountyManagerAbi,

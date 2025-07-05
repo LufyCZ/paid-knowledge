@@ -4,7 +4,7 @@ import { createContext, publicProcedure } from '../../trpc';
 import z from 'zod';
 import { answerSchema } from '@/lib/answers';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
-import { fromHex } from 'viem';
+import { fromHex, toHex } from 'viem';
 
 function handler(req: Request) {
   return fetchRequestHandler({
@@ -17,14 +17,15 @@ function handler(req: Request) {
 
 export const answersGet = publicProcedure.input(z.object({ questionId: z.string() })).query(async ({ ctx, input }) => {
   // Read the question's answers' blob ids from the contract
-  const blobIds = await client.readContract({
+  const answerBlobIds = await client.readContract({
     address: bountyManagerAddress,
     abi: bountyManagerAbi,
-    functionName: 'getAllOpenBounties',
-  }).then((result) => result.map((id) => fromHex(id, 'string')))
+    functionName: 'getAnswersByBountyId',
+    args: [toHex(input.questionId)],
+  }).then((result) => result.map((r) => fromHex(r.answerId, 'string')))
 
   const answers = await Promise.allSettled(
-    blobIds.map(async (blobId) => {
+    answerBlobIds.map(async (blobId) => {
       const blob = await ctx.walrusClient.readBlob({
         blobId,
       });
