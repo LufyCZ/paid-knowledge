@@ -17,7 +17,7 @@ export function PaymentExample() {
 
   const [recipient, setRecipient] = useState(
     "0xF0C7Db5AceA62029058b0E4E0B79F2Bac18686C4"
-  ); // My address
+  );
   const [amount, setAmount] = useState("1");
   const [description, setDescription] = useState("Test payment to Bounty App");
 

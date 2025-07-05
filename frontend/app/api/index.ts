@@ -1,36 +1,20 @@
-import z from 'zod';
-import { publicProcedure, router } from './trpc';
-import { questionSchema } from '@/lib/questions';
+import { router } from './trpc';
+import { questionCreate } from './questions/create';
+import { questionGet } from './questions/get_one';
+import { questionsGet } from './questions/get';
+import { answersGet } from './questions/answers/get';
+import { answerCreate } from './questions/answers/create';
 
 export const appRouter = router({
-  question: {
-    create: publicProcedure
-      .input(questionSchema)
-      .mutation(async ({ ctx, input }) => {
-        // Check the payment transaction
-
-        // Write the whole question to walrus
-        const file = new TextEncoder().encode(JSON.stringify(input));
-        const blob = await ctx.walrusClient.writeBlob({
-          blob: file,
-          deletable: false,
-          epochs: 1,
-          signer: ctx.walrusSigner,
-        })
-
-        // Write the question to WorldChain
-
-        return blob
-      }),
-    get: publicProcedure.input(z.string()).query(async ({ ctx, input }) => {
-      const blob = await ctx.walrusClient.readBlob({
-        blobId: input,
-      });
-
-      const text = new TextDecoder().decode(blob);
-      return questionSchema.parse(JSON.parse(text));
-    })
-  },
-});
+  questions: {
+    create: questionCreate,
+    get_one: questionGet,
+    get: questionsGet,
+    answers: {
+      get: answersGet,
+      create: answerCreate,
+    }
+  }
+})
 
 export type AppRouter = typeof appRouter;
