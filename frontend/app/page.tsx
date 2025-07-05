@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
 import { useLocation } from "@/hooks/useLocation";
 import VerifyWrapper from "../components/VerifyWrapper";
+import WalletWrapper from "../components/WalletWrapper";
 import Webcam from "react-webcam";
 
 export default function Home() {
-
   const location = useLocation();
 
   return (
@@ -19,53 +19,72 @@ export default function Home() {
             </h1>
           </div>
 
-          <div className="text-center text-gray-600 dark:text-gray-400">
-            <p>Latitude: {location.latitude}</p>
-            <p>Longitude: {location.longitude}</p>
+          {/* Authentication Section */}
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* Wallet Connection */}
+            <WalletWrapper />
+
+            {/* World ID Verification */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+              <div className="mb-4">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <svg
+                    className="w-6 h-6 text-blue-600 dark:text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
+                  World ID Verification
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-center text-sm">
+                  Prove you're a unique human with World ID.
+                </p>
+              </div>
+              <VerifyWrapper />
+            </div>
           </div>
 
-          {/* Verification Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 mb-8">
-            <div className="mb-6">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-blue-600 dark:text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-                Identity Verification
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Use World ID to prove you're a unique human and gain access to
-                our platform.
+          {/* Location Info */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6 shadow-md">
+            <div className="text-center text-gray-600 dark:text-gray-400 text-sm">
+              <p>
+                <strong>Location:</strong> {location.latitude},{" "}
+                {location.longitude}
               </p>
+            </div>
+          </div>
+
+          {/* Camera Feed */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 text-center">
+              Camera Feed
+            </h3>
+            <div className="flex justify-center">
               <Webcam
                 audio={false}
-                height={720}
+                height={240}
                 screenshotFormat="image/jpeg"
-                width={1280}
+                width={320}
                 videoConstraints={{
-                  width: 1280,
-                  height: 720,
-                  facingMode: "environment"
-                }} />
+                  width: 320,
+                  height: 240,
+                  facingMode: "environment",
+                }}
+                className="rounded-lg"
+              />
             </div>
-
-            {/* Verify Component */}
-            <VerifyWrapper />
           </div>
         </div>
       </div>
-    </div >
+    </div>
   );
 }
