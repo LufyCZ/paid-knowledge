@@ -4,19 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWallet } from "@/hooks/useWallet";
 import { ClientOnly } from "./ClientOnly";
+import { FaGlobe } from "react-icons/fa";
+import { RiAccountCircleLine } from "react-icons/ri";
 
 const navigation = [
   {
     name: "Home",
     href: "/",
-    icon: "🏠",
-    activeIcon: "🏠",
+    Icon: FaGlobe,
   },
   {
     name: "Account",
     href: "/account",
-    icon: "👤",
-    activeIcon: "👤",
+    Icon: RiAccountCircleLine,
   },
 ];
 
@@ -27,47 +27,39 @@ export function BottomNavigation() {
   return (
     <ClientOnly
       fallback={
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 safe-area-bottom">
-          <div className="flex justify-around items-center max-w-md mx-auto">
-            <div className="flex flex-col items-center justify-center py-2 px-4 rounded-lg text-gray-600">
-              <span className="text-2xl mb-1">🏠</span>
-              <span className="text-xs font-medium">Home</span>
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4">
+          <div className="flex justify-center items-center space-x-16 max-w-md mx-auto">
+            <div className="flex items-center justify-center w-8 h-8">
+              <FaGlobe className="w-6 h-6 text-black" />
             </div>
-            <div className="flex flex-col items-center justify-center py-2 px-4 rounded-lg text-gray-600">
-              <span className="text-2xl mb-1">👤</span>
-              <span className="text-xs font-medium">Account</span>
+            <div className="flex items-center justify-center w-8 h-8">
+              <RiAccountCircleLine className="w-6 h-6 text-gray-600" />
             </div>
           </div>
         </div>
       }
     >
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 safe-area-bottom">
-        <div className="flex justify-around items-center max-w-md mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4">
+        <div className="flex justify-center items-center space-x-16 max-w-md mx-auto">
           {navigation.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href === "/" &&
                 (pathname === "/landing" || pathname === "/"));
 
+            const IconComponent = item.Icon;
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-2 px-4 rounded-lg transition-colors min-w-0 ${
-                  isActive
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                }`}
+                className="flex items-center justify-center w-8 h-8 transition-opacity hover:opacity-80"
               >
-                <span className="text-2xl mb-1">
-                  {isActive ? item.activeIcon : item.icon}
-                </span>
-                <span className="text-xs font-medium">{item.name}</span>
-
-                {/* Connection indicator for Account tab */}
-                {item.name === "Account" && isConnected && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></div>
-                )}
+                <IconComponent
+                  className={`w-6 h-6 ${
+                    isActive ? "text-black" : "text-gray-600"
+                  }`}
+                />
               </Link>
             );
           })}

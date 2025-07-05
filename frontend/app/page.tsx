@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 const FILTER_OPTIONS = [
   { id: "all", label: "All" },
   { id: "photo", label: "Photo" },
-  { id: "survey", label: "Survey" },
+  { id: "form", label: "Form" },
+  { id: "orb", label: "Orb verified" },
 ];
 
 export default function HomePage() {
@@ -27,35 +28,33 @@ export default function HomePage() {
   const filteredForms =
     selectedFilter === "all"
       ? allForms
-      : allForms.filter((form) => form.category === selectedFilter);
+      : selectedFilter === "orb"
+      ? allForms.filter((form) => form.eligibility === "Orb")
+      : allForms.filter(
+          (form) =>
+            form.category === selectedFilter ||
+            (selectedFilter === "form" && form.type === "Survey")
+        );
 
   // Helper function to get eligibility badge
   const getEligibilityBadge = (eligibility: string) => {
     switch (eligibility) {
       case "Orb":
         return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-            Orb
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-700">
+            Orb verified
           </span>
         );
       case "Device":
         return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-            Device
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
+            Device verified
           </span>
         );
       case "All":
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-            All
-          </span>
-        );
+        return null; // Don't show badge for "All" eligibility
       default:
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-            All
-          </span>
-        );
+        return null;
     }
   };
 
@@ -64,13 +63,28 @@ export default function HomePage() {
     if (!isClient) return ""; // Return empty string during SSR
 
     const date = new Date(dateString);
-    // Use UTC to ensure consistent rendering on server and client
-    const month = date.toLocaleDateString("en-US", {
-      month: "short",
-      timeZone: "UTC",
-    });
-    const day = date.getUTCDate();
-    return `${month} ${day}`;
+    const now = new Date();
+    const diffTime = date.getTime() - now.getTime();
+
+    if (diffTime <= 0) {
+      return "Expired";
+    }
+
+    const diffMinutes = Math.ceil(diffTime / (1000 * 60));
+    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 60) {
+      return `Ends in ${diffMinutes} ${
+        diffMinutes === 1 ? "minute" : "minutes"
+      }`;
+    } else if (diffHours < 24) {
+      return `Ends in ${diffHours} ${diffHours === 1 ? "hour" : "hours"}`;
+    } else if (diffDays === 1) {
+      return "Ends in 1 day";
+    } else {
+      return `Ends in ${diffDays} days`;
+    }
   };
 
   const FormCard = ({
@@ -81,68 +95,47 @@ export default function HomePage() {
     isFeatured?: boolean;
   }) => (
     <Link href={`/form/${form.id}`} className="block">
-      <div
-        className={`bg-white rounded-xl p-4 shadow-sm border hover:shadow-md transition-shadow ${
-          isFeatured ? "min-h-[200px]" : ""
-        }`}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center space-x-2">
-            <span
-              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                form.type === "Survey"
-                  ? "bg-purple-100 text-purple-700"
-                  : "bg-blue-100 text-blue-700"
-              }`}
-            >
-              {form.type}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:border-gray-200">
+        {/* Header with tags */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700">
+              {form.type === "Survey" ? "Survey" : form.type}
             </span>
-            <span className="text-lg font-semibold text-gray-900">
-              {form.reward}
-            </span>
+            {getEligibilityBadge(form.eligibility)}
           </div>
-          {isFeatured && (
-            <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
-              Featured
-            </span>
-          )}
         </div>
 
-        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-          {form.title}
-        </h3>
+        {/* Title and description */}
+        <div className="mb-4">
+          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-lg">
+            {form.title}
+          </h3>
+          <p className="text-sm text-gray-600 line-clamp-2">
+            {form.description}
+          </p>
+        </div>
 
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-          {form.description}
-        </p>
-
-        <div className="flex items-center justify-between text-sm text-gray-500">
-          <div className="flex items-center space-x-3">
-            {form.duration && (
-              <div className="flex items-center">
-                <span className="w-4 h-4 mr-1">⏱️</span>
-                {form.duration}
-              </div>
-            )}
-            {form.location && (
-              <div className="flex items-center">
-                <span className="w-4 h-4 mr-1">📍</span>
-                {form.location}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <div
-              className="flex items-center"
-              title={`Eligible: ${form.eligibility}`}
+        {/* Footer with timing info and price */}
+        <div className="flex items-center justify-between pt-3">
+          <div className="flex items-center text-sm text-gray-500">
+            <svg
+              className="w-4 h-4 mr-1.5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              {getEligibilityBadge(form.eligibility)}
-            </div>
-            <div className="flex items-center">
-              <span className="w-4 h-4 mr-1">📅</span>
-              {formatEndDate(form.endDate)}
-            </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {formatEndDate(form.endDate)}
+          </div>
+          <div className="text-lg font-semibold text-gray-900">
+            {form.reward}
           </div>
         </div>
       </div>
@@ -153,17 +146,20 @@ export default function HomePage() {
     <ClientOnly
       fallback={
         <div className="min-h-screen bg-gray-50 pb-20">
-          <div className="bg-white border-b border-gray-200 px-4 py-4">
+          <div className="bg-white border-b border-gray-100 px-6 py-4">
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-bold text-gray-900">Questy</h1>
-              <div className="bg-gray-200 rounded-full px-4 py-2">
+              <div className="bg-gray-200 rounded-full px-6 py-2">
                 <span className="text-sm text-gray-600">+ Create</span>
               </div>
             </div>
           </div>
-          <div className="px-4 py-6">
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+          <div className="px-6 py-8">
+            <div className="flex justify-center items-center py-16">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-black mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading forms...</p>
+              </div>
             </div>
           </div>
         </div>
@@ -171,13 +167,13 @@ export default function HomePage() {
     >
       <div className="min-h-screen bg-gray-50 pb-20">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-4 py-4">
+        <div className="bg-white border-b border-gray-100 px-6 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-gray-900">Questy</h1>
             <Link href="/form-builder">
               <Button
                 size="sm"
-                className="bg-black text-white hover:bg-gray-800 rounded-full px-4"
+                className="bg-black text-white hover:bg-gray-800 rounded-full px-6 py-2"
               >
                 + Create
               </Button>
@@ -185,56 +181,62 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="px-4 py-6 space-y-6">
+        <div className="px-6 py-8 space-y-8">
           {/* Show loading until client is mounted to prevent hydration issues */}
           {!isClient || isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+            <div className="flex justify-center items-center py-16">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-black mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading forms...</p>
+              </div>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <p className="text-red-800 text-sm">
-                Failed to load forms: {error}
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+              <div className="text-4xl mb-4">⚠️</div>
+              <p className="text-red-800 font-medium mb-2">
+                Something went wrong
               </p>
+              <p className="text-red-600 text-sm">{error}</p>
             </div>
           ) : (
             <>
               {/* Featured Section */}
               <section>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">
                   Featured
                 </h2>
                 {featuredForms.length > 0 ? (
                   <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2">
                     {featuredForms.map((form) => (
-                      <div key={form.id} className="flex-shrink-0 w-64">
+                      <div key={form.id} className="flex-shrink-0 w-80">
                         <FormCard form={form} isFeatured={true} />
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-gray-500 text-center py-8">
-                    No featured forms available
+                  <div className="text-gray-500 text-center py-12 bg-white rounded-2xl border border-gray-100">
+                    <div className="text-4xl mb-4">📋</div>
+                    <p>No featured forms available</p>
                   </div>
                 )}
               </section>
 
               {/* Explore Section */}
               <section>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">
                   Explore
                 </h2>
 
                 {/* Filter Tabs */}
-                <div className="flex space-x-2 mb-4 overflow-x-auto scrollbar-hide pb-2">
+                <div className="flex space-x-3 mb-6 overflow-x-auto scrollbar-hide pb-2">
                   {FILTER_OPTIONS.map((filter) => (
                     <button
                       key={filter.id}
                       onClick={() => setSelectedFilter(filter.id)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                      className={`px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                         selectedFilter === filter.id
-                          ? "bg-black text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          ? "bg-black text-white shadow-sm"
+                          : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                       }`}
                     >
                       {filter.label}
@@ -244,14 +246,15 @@ export default function HomePage() {
 
                 {/* Forms Grid */}
                 {filteredForms.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredForms.map((form) => (
                       <FormCard key={form.id} form={form} />
                     ))}
                   </div>
                 ) : (
-                  <div className="text-gray-500 text-center py-8">
-                    No forms available for the selected filter
+                  <div className="text-gray-500 text-center py-12 bg-white rounded-2xl border border-gray-100">
+                    <div className="text-4xl mb-4">🔍</div>
+                    <p>No forms available for the selected filter</p>
                   </div>
                 )}
               </section>
@@ -260,11 +263,13 @@ export default function HomePage() {
 
           {/* Connection Prompt for Non-Connected Users */}
           {!isConnected && (
-            <div className="fixed bottom-24 left-4 right-4 bg-blue-600 text-white p-4 rounded-xl shadow-lg">
+            <div className="fixed bottom-24 left-6 right-6 bg-blue-600 text-white p-5 rounded-2xl shadow-xl border border-blue-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold">Connect to earn rewards</h3>
-                  <p className="text-sm text-blue-100">
+                  <h3 className="font-semibold text-lg">
+                    Connect to earn rewards
+                  </h3>
+                  <p className="text-sm text-blue-100 mt-1">
                     Connect your wallet to start earning from forms
                   </p>
                 </div>
@@ -272,7 +277,7 @@ export default function HomePage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="bg-white text-blue-600 hover:bg-gray-100 border-white"
+                    className="bg-white text-blue-600 hover:bg-gray-50 border-white rounded-full px-6"
                   >
                     Connect
                   </Button>
