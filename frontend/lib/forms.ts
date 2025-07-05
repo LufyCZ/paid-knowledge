@@ -221,7 +221,7 @@ export const textFormEntrySchema = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   placeholder: z.string().optional(),
-  required: z.boolean().optional(),
+  required: z.boolean(),
 });
 
 export const numberFormEntrySchema = z.object({
@@ -229,10 +229,10 @@ export const numberFormEntrySchema = z.object({
   id: z.string(),
   label: z.string(),
   placeholder: z.string().optional(),
-  required: z.boolean().optional(),
+  required: z.boolean(),
   min: z.number().optional(),
   max: z.number().optional(),
-  integer: z.boolean().optional(),
+  integer: z.boolean(),
 });
 
 export const imageFormEntrySchema = z.object({
@@ -249,6 +249,8 @@ export const formEntrySchema = z.discriminatedUnion("type", [
   imageFormEntrySchema,
 ]);
 export const formSchema = z.array(formEntrySchema);
+
+export type FormEntryType = z.infer<typeof formEntrySchema>['type']
 
 // Form submission types
 export interface FormSubmissionData {

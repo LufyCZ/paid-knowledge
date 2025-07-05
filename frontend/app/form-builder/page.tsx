@@ -1,34 +1,27 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBountyForm, CreateFormData } from "../../lib/forms";
+import {
+  createBountyForm,
+  CreateFormData,
+  formEntrySchema,
+  FormEntryType,
+} from "../../lib/forms";
 import { useWallet } from "../../hooks/useWallet";
 import { PaymentModal } from "../../components/PaymentModal";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc";
+import z from "zod";
 
 const QUESTION_TYPES = [
-  { name: "Short Text", icon: "📝", description: "Brief text response" },
-  { name: "Long Text", icon: "📄", description: "Detailed text response" },
-  { name: "Yes/No", icon: "✅", description: "Simple yes or no answer" },
-  { name: "Single Choice", icon: "🔘", description: "Pick one option" },
-  { name: "Multiple Choice", icon: "☑️", description: "Pick multiple options" },
-  { name: "Dropdown", icon: "⬇️", description: "Select from dropdown" },
-  { name: "Checkbox", icon: "✔️", description: "Check boxes" },
-  { name: "Picture Choice", icon: "🖼️", description: "Choose from images" },
-  { name: "Picture Answer", icon: "📸", description: "Upload an image" },
-  { name: "Video Answer", icon: "🎥", description: "Record or upload video" },
+  { name: "text", icon: "📄", description: "Text response" },
+  { name: "number", icon: "🔢", description: "Number response" },
+  { name: "image", icon: "📸", description: "Upload an image" },
 ];
 
-type Question = {
-  id: number;
-  title: string;
-  description: string;
-  type: string;
-  options?: string[]; // for choice types
-};
+type Question = z.infer<typeof formEntrySchema>;
 
 type BuilderType = "survey" | "photo" | null;
 
@@ -45,13 +38,40 @@ export default function FormBuilder() {
     setShowTypeMenu(true);
   };
 
-  const addQuestion = (type: string, index?: number) => {
-    const newQuestion: Question = {
-      id: Date.now(),
-      title: "",
-      description: "",
-      type: type,
-    };
+  const addQuestion = (type: FormEntryType, index?: number) => {
+    let newQuestion: Question;
+
+    switch (type) {
+      case "text":
+        newQuestion = {
+          id: crypto.randomUUID(),
+          type,
+          label: "",
+          required: false,
+        };
+        break;
+      case "number":
+        newQuestion = {
+          id: crypto.randomUUID(),
+          type,
+          label: "",
+          integer: false,
+          required: false,
+        };
+        break;
+      case "image":
+        newQuestion = {
+          id: crypto.randomUUID(),
+          type,
+          label: "",
+          min: 1,
+          max: 1,
+        };
+        break;
+      default:
+        return; // Invalid type
+    }
+
     const updated = [...questions];
     if (index !== undefined) {
       updated.splice(index + 1, 0, newQuestion);
@@ -63,7 +83,7 @@ export default function FormBuilder() {
     setInsertIndex(undefined);
   };
 
-  const deleteQuestion = (id: number) => {
+  const deleteQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
@@ -86,15 +106,13 @@ export default function FormBuilder() {
     }
   };
 
-  const updateQuestion = (id: number, key: keyof Question, value: any) => {
+  const updateQuestion = (
+    id: string,
+    key: string,
+    value: string | number | boolean | undefined
+  ) => {
     setQuestions((prev) =>
       prev.map((q) => (q.id === id ? { ...q, [key]: value } : q))
-    );
-  };
-
-  const updateOptions = (id: number, newOptions: string[]) => {
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, options: newOptions } : q))
     );
   };
 
@@ -189,7 +207,6 @@ export default function FormBuilder() {
             index={index}
             totalQuestions={questions.length}
             updateQuestion={updateQuestion}
-            updateOptions={updateOptions}
             onAddQuestion={() => openTypeMenu(index)}
             onDeleteQuestion={() => deleteQuestion(question.id)}
             onMoveUp={() => moveQuestionUp(index)}
@@ -267,7 +284,9 @@ export default function FormBuilder() {
                 {QUESTION_TYPES.map((type) => (
                   <button
                     key={type.name}
-                    onClick={() => addQuestion(type.name, insertIndex)}
+                    onClick={() =>
+                      addQuestion(type.name as FormEntryType, insertIndex)
+                    }
                     className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group"
                   >
                     <div className="flex items-start space-x-3">
@@ -330,7 +349,6 @@ function QuestionCard({
   index,
   totalQuestions,
   updateQuestion,
-  updateOptions,
   onAddQuestion,
   onDeleteQuestion,
   onMoveUp,
@@ -339,8 +357,11 @@ function QuestionCard({
   question: Question;
   index: number;
   totalQuestions: number;
-  updateQuestion: (id: number, key: keyof Question, value: any) => void;
-  updateOptions: (id: number, newOptions: string[]) => void;
+  updateQuestion: (
+    id: string,
+    key: string,
+    value: string | number | boolean | undefined
+  ) => void;
   onAddQuestion: () => void;
   onDeleteQuestion: () => void;
   onMoveUp: () => void;
@@ -413,40 +434,240 @@ function QuestionCard({
           <input
             type="text"
             placeholder="Enter your question..."
-            value={question.title}
+            value={question.label}
             onChange={(e) =>
-              updateQuestion(question.id, "title", e.target.value)
+              updateQuestion(question.id, "label", e.target.value)
             }
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description (optional)
-          </label>
-          <input
-            type="text"
-            placeholder="Add helpful context..."
-            value={question.description}
-            onChange={(e) =>
-              updateQuestion(question.id, "description", e.target.value)
-            }
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-          />
-        </div>
+        {/* Type-specific configuration */}
+        {question.type === "text" && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Placeholder (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter placeholder text..."
+                value={question.placeholder || ""}
+                onChange={(e) =>
+                  updateQuestion(question.id, "placeholder", e.target.value)
+                }
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Min Length
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={question.min || ""}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "min",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Length
+                </label>
+                <input
+                  type="number"
+                  placeholder="100"
+                  value={question.max || ""}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "max",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`required-${question.id}`}
+                checked={question.required || false}
+                onChange={(e) =>
+                  updateQuestion(question.id, "required", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor={`required-${question.id}`}
+                className="text-sm font-medium text-gray-700"
+              >
+                Required field
+              </label>
+            </div>
+          </div>
+        )}
 
-        {[
-          "Single Choice",
-          "Multiple Choice",
-          "Dropdown",
-          "Checkbox",
-          "Picture Choice",
-        ].includes(question.type) && (
-          <ChoiceOptionEditor
-            options={question.options || []}
-            onChange={(opts) => updateOptions(question.id, opts)}
-          />
+        {question.type === "number" && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Placeholder (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter placeholder text..."
+                value={question.placeholder || ""}
+                onChange={(e) =>
+                  updateQuestion(question.id, "placeholder", e.target.value)
+                }
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Min Value
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={question.min || ""}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "min",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Value
+                </label>
+                <input
+                  type="number"
+                  placeholder="100"
+                  value={question.max || ""}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "max",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`integer-${question.id}`}
+                checked={question.integer || false}
+                onChange={(e) =>
+                  updateQuestion(question.id, "integer", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor={`integer-${question.id}`}
+                className="text-sm font-medium text-gray-700"
+              >
+                Integer only (no decimals)
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`required-${question.id}`}
+                checked={question.required || false}
+                onChange={(e) =>
+                  updateQuestion(question.id, "required", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor={`required-${question.id}`}
+                className="text-sm font-medium text-gray-700"
+              >
+                Required field
+              </label>
+            </div>
+          </div>
+        )}
+
+        {question.type === "image" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Min Images *
+                </label>
+                <input
+                  type="number"
+                  placeholder="1"
+                  min="1"
+                  value={question.min || 1}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "min",
+                      parseInt(e.target.value) || 1
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Images *
+                </label>
+                <input
+                  type="number"
+                  placeholder="1"
+                  min="1"
+                  value={question.max || 1}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "max",
+                      parseInt(e.target.value) || 1
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-600">📸</span>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Image Upload
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Users will be able to upload{" "}
+                    {question.min === question.max
+                      ? `${question.min}`
+                      : `${question.min}-${question.max}`}{" "}
+                    image{(question.max || 1) > 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         <button
@@ -456,65 +677,6 @@ function QuestionCard({
           ➕ Add Question Below
         </button>
       </div>
-    </div>
-  );
-}
-
-function ChoiceOptionEditor({
-  options,
-  onChange,
-}: {
-  options: string[];
-  onChange: (opts: string[]) => void;
-}) {
-  const update = (i: number, value: string) => {
-    const newOpts = [...options];
-    newOpts[i] = value;
-    onChange(newOpts);
-  };
-
-  const add = () => onChange([...options, ""]);
-
-  const remove = (i: number) => {
-    const newOpts = [...options];
-    newOpts.splice(i, 1);
-    onChange(newOpts);
-  };
-
-  return (
-    <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">
-        Options *
-      </label>
-      <div className="space-y-3">
-        {options.map((opt, i) => (
-          <div key={i} className="flex gap-3 items-center">
-            <div className="flex-1">
-              <input
-                type="text"
-                value={opt}
-                placeholder={`Option ${i + 1}`}
-                onChange={(e) => update(i, e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-              />
-            </div>
-            {options.length > 1 && (
-              <button
-                onClick={() => remove(i)}
-                className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 active:bg-red-200 transition-all duration-150 touch-manipulation text-lg"
-              >
-                🗑️
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-      <button
-        onClick={add}
-        className="w-full py-4 px-4 border-2 border-dashed border-gray-300 hover:border-blue-400 text-gray-600 hover:text-blue-600 rounded-lg transition-all duration-150 font-medium touch-manipulation active:bg-blue-50"
-      >
-        ➕ Add Option
-      </button>
     </div>
   );
 }
@@ -602,7 +764,7 @@ function QuestSetupPage({
           <div className="mt-3 space-y-2">
             {questions.slice(0, 3).map((q, i) => (
               <div key={q.id} className="text-sm text-gray-500">
-                {i + 1}. {q.title || "Untitled Question"} ({q.type})
+                {i + 1}. {q.label || "Untitled Question"} ({q.type})
               </div>
             ))}
             {questions.length > 3 && (
@@ -783,7 +945,6 @@ function PaymentStepPage({
   const [showPaymentModal, setShowPaymentModal] = useState(true);
 
   const router = useRouter();
-  const { isConnected } = useWallet();
 
   // Get quest data from localStorage or previous step
   React.useEffect(() => {
@@ -824,12 +985,12 @@ function PaymentStepPage({
         rewardPerQuestion: payment.rewardPerQuestion,
         rewardToken: payment.token,
         userEligibility: formData.userEligibility,
-        questions: questions.map((q) => ({
-          id: q.id,
-          title: q.title,
-          description: q.description,
+        questions: questions.map((q, index) => ({
+          id: index, // Use index as ID for CreateFormData
+          title: q.label,
+          description: "", // Form entry schema doesn't have description
           type: q.type,
-          options: q.options,
+          options: [], // Form entry schema doesn't have options for these types
         })),
         paymentData: {
           amount: payment.amount,
@@ -864,7 +1025,7 @@ function PaymentStepPage({
         question: {
           title: formData.name,
           description: formData.description,
-          form: [],
+          form: questions,
           reward: {
             amount: String(payment.amount),
             currency: payment.token,
