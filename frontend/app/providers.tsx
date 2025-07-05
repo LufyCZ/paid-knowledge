@@ -73,13 +73,21 @@ function ConnectionManager() {
 }
 
 // ---- Provider Wrapper ----
+function getBaseUrl() {
+  if (typeof window !== "undefined") return ""; // ✨ browser → relative path
+
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+
+  return `http://localhost:${process.env.PORT ?? 3000}`; // dev / other hosts
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
       links: [
         httpBatchLink({
-          url: "http://localhost:2022",
+          url: `${getBaseUrl()}/api/trpc`,
         }),
       ],
     })
