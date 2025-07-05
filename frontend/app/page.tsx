@@ -1,5 +1,5 @@
-import VerifyWrapper from "../components/VerifyWrapper";
-import WalletWrapper from "../components/WalletWrapper";
+import Verify from "../components/Verify";
+import WalletAuth from "../components/WalletAuth";
 import Camera from "../components/Camera";
 import Location from "../components/Location";
 import Link from "next/link";
@@ -37,7 +37,7 @@ export default function Home() {
           {/* Authentication Section */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             {/* Wallet Connection */}
-            <WalletWrapper />
+            <WalletAuth />
 
             {/* World ID Verification */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
@@ -64,7 +64,7 @@ export default function Home() {
                   Prove you're a unique human with World ID.
                 </p>
               </div>
-              <VerifyWrapper />
+              <Verify />
             </div>
           </div>
 
