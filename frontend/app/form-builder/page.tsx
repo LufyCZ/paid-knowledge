@@ -6,8 +6,6 @@ import { useWallet } from "../../hooks/useWallet";
 import { PaymentModal } from "../../components/PaymentModal";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useMutation } from "@tanstack/react-query";
-import { useTRPC } from "@/lib/trpc";
 
 const QUESTION_TYPES = [
   { name: "Short Text", icon: "📝", description: "Brief text response" },
@@ -793,11 +791,6 @@ function PaymentStepPage({
     }
   }, []);
 
-  const trpc = useTRPC();
-  const createFormMutation = useMutation(
-    trpc.questions.create.mutationOptions()
-  );
-
   const handlePaymentSuccess = async (payment: {
     amount: number;
     token: "USDC" | "WLD";
@@ -859,19 +852,6 @@ function PaymentStepPage({
         setError(result.error || "Failed to create quest");
         setShowPaymentModal(true); // Show payment modal again
       }
-
-      await createFormMutation.mutateAsync({
-        transactionId: payment.transactionId,
-        question: {
-          title: formData.name,
-          description: formData.description,
-          form: [],
-          reward: {
-            amount: String(payment.amount),
-            currency: payment.token,
-          },
-        },
-      });
     } catch (err) {
       console.error("Error creating quest:", err);
       setError("An unexpected error occurred. Please try again.");

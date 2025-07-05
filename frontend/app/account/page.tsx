@@ -14,7 +14,7 @@ import { MiniKit } from "@worldcoin/minikit-js";
 import { Button } from "@/components/ui/button";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { ClientOnly } from "@/components/ClientOnly";
-import { QuestManagement } from "@/components/QuestManagement";
+import { QuestManagement } from "@/components/QuestManagementMobile";
 import Link from "next/link";
 
 export default function AccountPage() {
@@ -214,19 +214,6 @@ export default function AccountPage() {
             <Button onClick={connect} className="w-full" disabled={!installed}>
               {!installed ? "Install World App" : "Connect Wallet"}
             </Button>
-
-            {/* Debug info for development */}
-            {process.env.NODE_ENV === "development" && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg text-left">
-                <p className="text-xs text-gray-600">Debug:</p>
-                <p className="text-xs text-gray-600">
-                  Installed: {installed ? "Yes" : "No"}
-                </p>
-                <p className="text-xs text-gray-600">
-                  Connected: {isConnected ? "Yes" : "No"}
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </ClientOnly>
@@ -513,13 +500,13 @@ export default function AccountPage() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {" "}
-                  <Link href="/" className="block">
+                  <Link href="/form-builder" className="block">
                     <Button variant="outline" className="w-full h-12 text-base">
                       <span className="mr-2">➕</span>
                       Create New Quest
                     </Button>
                   </Link>
-                  <Link href="/" className="block">
+                  <Link href="/forms" className="block">
                     <Button variant="outline" className="w-full h-12 text-base">
                       <span className="mr-2">📝</span>
                       Browse Quests
