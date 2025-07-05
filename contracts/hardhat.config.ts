@@ -3,6 +3,9 @@ import type { HardhatUserConfig } from "hardhat/config";
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { configVariable } from "hardhat/config";
 
+import dotenv from "dotenv";
+dotenv.config();
+
 const config: HardhatUserConfig = {
   /*
    * In Hardhat 3, plugins are defined as part of the Hardhat config instead of
@@ -77,6 +80,13 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       url: configVariable("SEPOLIA_RPC_URL"),
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+    },
+    worldcoin: {
+      type: "http",
+      chainType: "optimism",
+      url: configVariable("WORLDCOIN_RPC_URL"),
+      accounts: [configVariable("WORLDCOIN_PRIVATE_KEY")],
+      chainId: 480,
     },
   },
 };
