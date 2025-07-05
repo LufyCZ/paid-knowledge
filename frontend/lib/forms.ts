@@ -29,10 +29,17 @@ export interface CreateFormData {
 export async function createBountyForm(formData: CreateFormData) {
   try {
     // 1. Create the bounty form
+    function toTitleCase(str: string) {
+      return str.replace(
+        /\w\S*/g,
+        (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
+      );
+    }
+
     const { data: form, error: formError } = await supabase
       .from("bounty_forms")
       .insert({
-        name: formData.name,
+        name: toTitleCase(formData.name),
         description: formData.description,
         start_date: formData.startDate,
         end_date: formData.endDate,

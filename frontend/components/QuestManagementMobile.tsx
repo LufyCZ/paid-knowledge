@@ -101,13 +101,6 @@ export function QuestManagement({ walletAddress }: QuestManagementProps) {
                 <h3 className="font-semibold text-gray-900 truncate">
                   {quest.name}
                 </h3>
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                    quest.status
-                  )} shrink-0`}
-                >
-                  {quest.status}
-                </span>
               </div>
               {quest.description && (
                 <p
