@@ -1,10 +1,13 @@
+"use client";
+
 import Verify from "../components/Verify";
 import WalletAuth from "../components/WalletAuth";
-import Camera from "../components/Camera";
 import Location from "../components/Location";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-16">
@@ -89,7 +92,8 @@ export default function Home() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 text-center">
               Camera Feed
             </h3>
-            <Camera />
+            <button className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 hover:bg-blue-600 transition-colors"
+              onClick={() => router.push("/take-photo")}>Go to take photo</button>
           </div>
         </div>
       </div>
