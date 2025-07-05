@@ -1,35 +1,37 @@
 "use client";
 
-import {
-  QueryClient,
-  QueryClientProvider,
-  QueryCache,
-  isServer,
-} from "@tanstack/react-query";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { createContext, useContext, useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import type { AppRouter } from "./api";
+import { TRPCProvider } from "@/lib/trpc";
 
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        gcTime: 1000 * 60 * 60 * 24,
-        staleTime: 1000 * 60 * 5,
+        // With SSR, we usually want to set some default staleTime
+        // above 0 to avoid refetching immediately on the client
+        staleTime: 60 * 1000,
       },
     },
-    queryCache: new QueryCache(),
   });
 }
-
-let clientQueryClientSingleton: QueryClient | undefined = undefined;
-const getQueryClient = () => {
-  if (isServer) return makeQueryClient();
-
-  if (!clientQueryClientSingleton) {
-    clientQueryClientSingleton = makeQueryClient();
+let browserQueryClient: QueryClient | undefined = undefined;
+function getQueryClient() {
+  if (typeof window === "undefined") {
+    // Server: always make a new query client
+    return makeQueryClient();
+  } else {
+    // Browser: make a new query client if we don't already have one
+    // This is very important, so we don't re-make a new client if React
+    // suspends during the initial render. This may not be needed if we
+    // have a suspense boundary BELOW the creation of the query client
+    if (!browserQueryClient) browserQueryClient = makeQueryClient();
+    return browserQueryClient;
   }
-  return clientQueryClientSingleton;
-};
+}
 
 // ---- MiniKit Context ----
 const MiniKitContext = createContext<{ installed: boolean }>({
@@ -73,6 +75,16 @@ function ConnectionManager() {
 // ---- Provider Wrapper ----
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
+  const [trpcClient] = useState(() =>
+    createTRPCClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: "http://localhost:2022",
+        }),
+      ],
+    })
+  );
+
   const [installed, setInstalled] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -99,10 +111,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MiniKitContext.Provider value={{ installed }}>
-        <ConnectionManager />
-        {children}
-      </MiniKitContext.Provider>
+      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+        <MiniKitContext.Provider value={{ installed }}>
+          <ConnectionManager />
+          {children}
+        </MiniKitContext.Provider>
+      </TRPCProvider>
     </QueryClientProvider>
   );
 }
