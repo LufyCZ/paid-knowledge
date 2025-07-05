@@ -12,7 +12,7 @@ export const numberAnswerEntrySchema = z.object({
 
 export const imageAnswerEntrySchema = z.object({
   formEntryId: z.string(),
-  imageBlobId: z.string(),
+  imageData: z.string(),
 })
 
 export const answerEntrySchema = z.union([
