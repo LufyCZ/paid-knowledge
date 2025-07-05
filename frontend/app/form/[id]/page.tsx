@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { getBountyForm, submitFormResponse } from "@/lib/forms";
 import { useWallet } from "@/hooks/useWallet";
-import { BountyForm, FormQuestion } from "@/lib/supabase";
+import { z } from "zod";
+import { questionSchema } from "@/lib/questions";
 import { Button } from "@/components/ui/button";
 
 interface FormData {
@@ -17,9 +18,7 @@ export default function FormPage() {
   const router = useRouter();
   const formId = params.id as string;
 
-  const [formData, setFormData] = useState<
-    (BountyForm & { form_questions: FormQuestion[] }) | null
-  >(null);
+  const [formData, setFormData] = useState<z.infer<typeof questionSchema> | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,14 +41,14 @@ export default function FormPage() {
       try {
         // Prepare answers
         const answers =
-          formData?.form_questions.map((question) => ({
-            questionId: question.id,
+          formData?.form.map((entry) => ({
+            questionId: entry.id,
             answerText:
-              typeof value[question.id] === "string"
-                ? (value[question.id] as string)
+              typeof value[entry.id] === "string"
+                ? (value[entry.id] as string)
                 : undefined,
-            answerOptions: Array.isArray(value[question.id])
-              ? (value[question.id] as string[])
+            answerOptions: Array.isArray(value[entry.id])
+              ? (value[entry.id] as string[])
               : undefined,
           })) || [];
 
@@ -82,36 +81,7 @@ export default function FormPage() {
           return;
         }
 
-        // Check if form is active
-        if (result.data.status !== "active") {
-          setError("This form is not currently active");
-          return;
-        }
-
-        // Check dates
-        const now = new Date();
-        const startDate = new Date(result.data.start_date);
-        const endDate = new Date(result.data.end_date);
-
-        if (now < startDate) {
-          setError("This form is not yet available");
-          return;
-        }
-
-        if (now > endDate) {
-          setError("This form has expired");
-          return;
-        }
-
-        // Sort questions by order
-        const sortedQuestions = [...result.data.form_questions].sort(
-          (a, b) => a.order_index - b.order_index
-        );
-
-        setFormData({
-          ...result.data,
-          form_questions: sortedQuestions,
-        });
+        setFormData(result.data);
       } catch (err) {
         setError("Failed to load form");
       } finally {
@@ -427,11 +397,10 @@ export default function FormPage() {
                   {question.options?.map((option, index) => (
                     <label
                       key={index}
-                      className={`relative cursor-pointer border-2 rounded-lg p-3 text-center transition-all ${
-                        field.state.value === option
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
+                      className={`relative cursor-pointer border-2 rounded-lg p-3 text-center transition-all ${field.state.value === option
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                        }`}
                     >
                       <input
                         type="radio"
@@ -570,7 +539,7 @@ export default function FormPage() {
         {/* Form Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-            {formData.name}
+            {formData.title}
           </h1>
           {formData.description && (
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
@@ -584,7 +553,7 @@ export default function FormPage() {
                 💰 {formData.reward_per_question} {formData.reward_token}
               </span>
               <span className="flex items-center">
-                📊 {formData.form_questions.length} questions
+                📊 {formData.form.length} questions
               </span>
             </div>
           </div>
@@ -619,7 +588,7 @@ export default function FormPage() {
           }}
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-6"
         >
-          {formData.form_questions.map(renderQuestionField)}
+          {formData.form.map(renderQuestionField)}
 
           {/* Submit Button */}
           <div className="pt-6 border-t border-gray-200">

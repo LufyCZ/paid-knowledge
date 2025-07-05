@@ -5,10 +5,12 @@ import Link from "next/link";
 import { getBountyForms } from "@/lib/forms";
 import { BountyForm } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import { z } from "zod";
+import { questionSchema } from "@/lib/questions";
 
 export default function FormsListPage() {
-  const [allForms, setAllForms] = useState<BountyForm[]>([]);
-  const [filteredForms, setFilteredForms] = useState<BountyForm[]>([]);
+  const [allForms, setAllForms] = useState<z.infer<typeof questionSchema>[]>([]);
+  const [filteredForms, setFilteredForms] = useState<z.infer<typeof questionSchema>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,20 +34,7 @@ export default function FormsListPage() {
           return;
         }
 
-        // Filter to only show active, public forms within date range
-        const now = new Date();
-        const activeForms = (result.data || []).filter((form) => {
-          const startDate = new Date(form.start_date);
-          const endDate = new Date(form.end_date);
-          return (
-            form.status === "active" &&
-            form.visibility === "Public" &&
-            now >= startDate &&
-            now <= endDate
-          );
-        });
-
-        setAllForms(activeForms);
+        setAllForms(result.data || []);
       } catch (err) {
         setError("Failed to load forms");
       } finally {
@@ -64,7 +53,7 @@ export default function FormsListPage() {
     if (searchQuery.trim()) {
       filtered = filtered.filter(
         (form) =>
-          form.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          form.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (form.description &&
             form.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
@@ -79,7 +68,7 @@ export default function FormsListPage() {
 
     // Apply token filter
     if (tokenFilter !== "All") {
-      filtered = filtered.filter((form) => form.reward_token === tokenFilter);
+      filtered = filtered.filter((form) => form.reward?.currency === tokenFilter);
     }
 
     // Apply sorting
@@ -98,9 +87,9 @@ export default function FormsListPage() {
             new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
           );
         case "reward-high":
-          return b.reward_per_question - a.reward_per_question;
+          return Number(b.reward?.amount ?? 0) - Number(a.reward?.amount ?? 0);
         case "reward-low":
-          return a.reward_per_question - b.reward_per_question;
+          return Number(a.reward?.amount ?? 0) - Number(b.reward?.amount ?? 0);
         default:
           return 0;
       }
@@ -201,17 +190,16 @@ export default function FormsListPage() {
               {(eligibilityFilter !== "Any" ||
                 tokenFilter !== "All" ||
                 sortBy !== "newest") && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 animate-pulse">
-                  Filters active
-                </span>
-              )}
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 animate-pulse">
+                    Filters active
+                  </span>
+                )}
               {/* Expand/Collapse Icon */}
               <div
-                className={`transform transition-all duration-300 ease-out ${
-                  filtersExpanded
-                    ? "rotate-180 text-blue-600"
-                    : "rotate-0 text-gray-400"
-                } group-hover:scale-110`}
+                className={`transform transition-all duration-300 ease-out ${filtersExpanded
+                  ? "rotate-180 text-blue-600"
+                  : "rotate-0 text-gray-400"
+                  } group-hover:scale-110`}
               >
                 <span>▼</span>
               </div>
@@ -220,11 +208,10 @@ export default function FormsListPage() {
 
           {/* Collapsible Filter Content */}
           <div
-            className={`transition-all duration-500 ease-in-out ${
-              filtersExpanded
-                ? "max-h-96 opacity-100 translate-y-0"
-                : "max-h-0 opacity-0 -translate-y-2"
-            } overflow-hidden`}
+            className={`transition-all duration-500 ease-in-out ${filtersExpanded
+              ? "max-h-96 opacity-100 translate-y-0"
+              : "max-h-0 opacity-0 -translate-y-2"
+              } overflow-hidden`}
           >
             <div className="border-t border-gray-200 p-4 sm:p-6 animate-in slide-in-from-top-2 duration-300">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -297,21 +284,21 @@ export default function FormsListPage() {
                   eligibilityFilter !== "Any" ||
                   tokenFilter !== "All" ||
                   sortBy !== "newest") && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery("");
-                      setEligibilityFilter("Any");
-                      setTokenFilter("All");
-                      setSortBy("newest");
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-all duration-200 flex items-center space-x-1 hover:bg-blue-50 px-3 py-2 rounded-lg transform hover:scale-105"
-                  >
-                    <span className="transition-transform duration-200 hover:rotate-180">
-                      🔄
-                    </span>
-                    <span>Clear all filters</span>
-                  </button>
-                )}
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setEligibilityFilter("Any");
+                        setTokenFilter("All");
+                        setSortBy("newest");
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-all duration-200 flex items-center space-x-1 hover:bg-blue-50 px-3 py-2 rounded-lg transform hover:scale-105"
+                    >
+                      <span className="transition-transform duration-200 hover:rotate-180">
+                        🔄
+                      </span>
+                      <span>Clear all filters</span>
+                    </button>
+                  )}
               </div>
             </div>
           </div>
@@ -332,8 +319,8 @@ export default function FormsListPage() {
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredForms.map((form) => (
-              <FormCard key={form.id} form={form} />
+            {filteredForms.map((form, idx) => (
+              <FormCard key={idx} form={form} />
             ))}
           </div>
         )}
@@ -358,7 +345,7 @@ export default function FormsListPage() {
 }
 
 interface FormCardProps {
-  form: BountyForm;
+  form: z.infer<typeof questionSchema>;
 }
 
 // Helper function to get eligibility icon and description
@@ -407,7 +394,7 @@ function FormCard({ form }: FormCardProps) {
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-            {form.name}
+            {form.title}
           </h3>
           <div className="flex-shrink-0 ml-2 space-y-1">
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 block">
@@ -441,7 +428,7 @@ function FormCard({ form }: FormCardProps) {
                 Reward per Form
               </p>
               <p className="text-lg font-bold text-blue-600">
-                {form.reward_per_question} {form.reward_token}
+                {form.reward?.amount} {form.reward?.currency}
               </p>
             </div>
             <div className="text-2xl">💰</div>
@@ -454,9 +441,8 @@ function FormCard({ form }: FormCardProps) {
             <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
             <span>
               {daysRemaining > 0
-                ? `${daysRemaining} day${
-                    daysRemaining === 1 ? "" : "s"
-                  } remaining`
+                ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"
+                } remaining`
                 : "Ends today"}
             </span>
           </div>
