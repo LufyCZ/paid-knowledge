@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import Webcam from "react-webcam";
+import { takePhotoHaptic } from "@/lib/haptic";
 
 
 export const useCamera = () => {
@@ -11,6 +12,7 @@ export const useCamera = () => {
     const makePhoto = useCallback(() => {
         const photo = webcamRef.current?.getScreenshot();
         if (photo) {
+            takePhotoHaptic();
             setPhoto(photo);
         }
     }, [webcamRef]);
