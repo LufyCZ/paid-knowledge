@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 const FILTER_OPTIONS = [
   { id: "all", label: "All" },
   { id: "photo", label: "Photo" },
-  { id: "form", label: "Form" },
-  { id: "orb", label: "Orb verified" },
+  { id: "form", label: "Survey" },
 ];
 
 export default function HomePage() {
