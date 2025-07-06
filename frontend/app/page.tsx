@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useForms, type FormData } from "@/hooks/useForms";
+import { useProfile } from "@/hooks/useProfile";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
+import { useToast } from "@/components/ui/toast";
+import { canAccessQuest } from "@/lib/verification";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ErrorWithRetry } from "@/components/RetryButton";
 import Link from "next/link";
@@ -17,6 +20,8 @@ const FILTER_OPTIONS = [
 
 export default function HomePage() {
   const { isConnected } = useWallet();
+  const { profile } = useProfile();
+  const { showToast } = useToast();
   const {
     featuredForms,
     allForms,
@@ -109,54 +114,73 @@ export default function HomePage() {
   }: {
     form: FormData;
     isFeatured?: boolean;
-  }) => (
-    <Link href={`/form/${form.id}`} className="block">
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:border-gray-200">
-        {/* Header with tags */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700">
-              {form.type === "Survey" ? "Survey" : form.type}
-            </span>
-            {getEligibilityBadge(form.eligibility)}
-          </div>
-        </div>
+  }) => {
+    const handleCardClick = (e: React.MouseEvent) => {
+      const { canAccess, reason } = canAccessQuest(
+        profile,
+        form.eligibility as "None" | "Device" | "Orb" | "All"
+      );
 
-        {/* Title and description */}
-        <div className="mb-4">
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-lg">
-            {form.title}
-          </h3>
-          <p className="text-sm text-gray-600 line-clamp-2">
-            {form.description}
-          </p>
-        </div>
+      if (!canAccess) {
+        e.preventDefault();
+        showToast(reason || "You cannot access this quest", "error");
+        return;
+      }
+    };
 
-        {/* Footer with timing info and price */}
-        <div className="flex items-center justify-between pt-3">
-          <div className="flex items-center text-sm text-gray-500">
-            <svg
-              className="w-4 h-4 mr-1.5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            {formatEndDate(form.endDate)}
+    return (
+      <Link
+        href={`/form/${form.id}`}
+        className="block"
+        onClick={handleCardClick}
+      >
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:border-gray-200">
+          {/* Header with tags */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700">
+                {form.type === "Survey" ? "Survey" : form.type}
+              </span>
+              {getEligibilityBadge(form.eligibility)}
+            </div>
           </div>
-          <div className="text-lg font-semibold text-gray-900">
-            {form.reward}
+
+          {/* Title and description */}
+          <div className="mb-4">
+            <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-lg">
+              {form.title}
+            </h3>
+            <p className="text-sm text-gray-600 line-clamp-2">
+              {form.description}
+            </p>
+          </div>
+
+          {/* Footer with timing info and price */}
+          <div className="flex items-center justify-between pt-3">
+            <div className="flex items-center text-sm text-gray-500">
+              <svg
+                className="w-4 h-4 mr-1.5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              {formatEndDate(form.endDate)}
+            </div>
+            <div className="text-lg font-semibold text-gray-900">
+              {form.reward}
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
-  );
+      </Link>
+    );
+  };
 
   return (
     <ClientOnly

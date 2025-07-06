@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "./api";
 import { TRPCProvider } from "@/lib/trpc";
+import { ToastProvider } from "@/components/ui/toast";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -103,7 +104,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <MiniKitContext.Provider value={{ installed: false }}>
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </MiniKitContext.Provider>
       </QueryClientProvider>
     );
@@ -113,8 +114,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
         <MiniKitContext.Provider value={{ installed }}>
-          <ConnectionManager />
-          {children}
+          <ToastProvider>
+            <ConnectionManager />
+            {children}
+          </ToastProvider>
         </MiniKitContext.Provider>
       </TRPCProvider>
     </QueryClientProvider>
