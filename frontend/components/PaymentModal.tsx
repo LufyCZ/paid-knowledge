@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useWorldPay } from "../hooks/useWorldPay";
 import { Button } from "./ui/button";
+import { CONTRACT_ADDRESS } from "@/lib/constants";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -95,8 +96,7 @@ export function PaymentModal({
       const paymentFunction = rewardToken === "USDC" ? payUSDC : payWLD;
 
       const result = await paymentFunction(
-        // TODO: Replace with your contract/treasury address
-        "0xF0C7Db5AceA62029058b0E4E0B79F2Bac18686C4",
+        CONTRACT_ADDRESS,
         totalAmount.toString(),
         `Funding for bounty form: ${formName}`
       );
