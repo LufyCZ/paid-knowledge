@@ -1,13 +1,15 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm } from "@tanstack/react-form";
 import { getBountyForm, submitFormResponse } from "@/lib/forms";
 import { useWallet } from "@/hooks/useWallet";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
+import { useRetry } from "@/hooks/useRetry";
 import { BountyForm, FormQuestion } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import { RetryButton } from "@/components/RetryButton";
 
 interface FormData {
   [key: string]: string | string[] | number;
@@ -21,24 +23,95 @@ export default function FormPage() {
   const [formData, setFormData] = useState<
     (BountyForm & { form_questions: FormQuestion[] }) | null
   >(null);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   const { isConnected, address, connect } = useWallet();
+
+  // Stable fetch function for retry mechanism
+  const fetchForm = useCallback(async () => {
+    if (!formId) return;
+
+    const result = await getBountyForm(formId);
+    if (!result.success || !result.data) {
+      throw new Error("Form not found");
+    }
+
+    // Check if form is active
+    if (result.data.status !== "active") {
+      throw new Error("This form is not currently active");
+    }
+
+    // Check dates
+    const now = new Date();
+    const startDate = new Date(result.data.start_date);
+    const endDate = new Date(result.data.end_date);
+
+    if (now < startDate) {
+      throw new Error("This form is not yet available");
+    }
+
+    if (now > endDate) {
+      throw new Error("This form has expired");
+    }
+
+    // Sort questions by order
+    const sortedQuestions = [...result.data.form_questions].sort(
+      (a, b) => a.order_index - b.order_index
+    );
+
+    setFormData({
+      ...result.data,
+      form_questions: sortedQuestions,
+    });
+  }, [formId]);
+
+  // Use retry mechanism for form loading
+  const {
+    execute: loadForm,
+    isLoading: loading,
+    error,
+    retryCount,
+    canRetry,
+    retry,
+  } = useRetry(fetchForm, {
+    maxRetries: 3,
+    initialDelay: 1000,
+    shouldRetry: (error, attempt) => {
+      // Don't retry for form validation errors
+      if (
+        error?.message?.includes("not currently active") ||
+        error?.message?.includes("not yet available") ||
+        error?.message?.includes("has expired") ||
+        error?.message?.includes("Form not found")
+      ) {
+        return false;
+      }
+
+      return (
+        attempt < 3 &&
+        (error?.message?.includes("fetch") ||
+          error?.message?.includes("network") ||
+          error?.message?.includes("timeout") ||
+          error?.message?.includes("Failed to fetch"))
+      );
+    },
+  });
+
+  // Separate error state for form submission
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   // TanStack Form
   const form = useForm({
     defaultValues: {} as FormData,
     onSubmit: async ({ value }) => {
       if (!isConnected || !address) {
-        setError("Please connect your wallet first");
+        setSubmissionError("Please connect your wallet first");
         return;
       }
 
       setSubmitting(true);
-      setError(null);
+      setSubmissionError(null);
 
       try {
         // Prepare answers
@@ -67,59 +140,14 @@ export default function FormPage() {
 
         setSubmitted(true);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to submit form");
+        setSubmissionError(
+          err instanceof Error ? err.message : "Failed to submit form"
+        );
       } finally {
         setSubmitting(false);
       }
     },
   });
-
-  const loadForm = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await getBountyForm(formId);
-      if (!result.success || !result.data) {
-        setError("Form not found");
-        return;
-      }
-
-      // Check if form is active
-      if (result.data.status !== "active") {
-        setError("This form is not currently active");
-        return;
-      }
-
-      // Check dates
-      const now = new Date();
-      const startDate = new Date(result.data.start_date);
-      const endDate = new Date(result.data.end_date);
-
-      if (now < startDate) {
-        setError("This form is not yet available");
-        return;
-      }
-
-      if (now > endDate) {
-        setError("This form has expired");
-        return;
-      }
-
-      // Sort questions by order
-      const sortedQuestions = [...result.data.form_questions].sort(
-        (a, b) => a.order_index - b.order_index
-      );
-
-      setFormData({
-        ...result.data,
-        form_questions: sortedQuestions,
-      });
-    } catch (err) {
-      setError("Failed to load form");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Use data refresh hook for navigation events
   useDataRefresh({ refreshFn: loadForm });
@@ -128,7 +156,7 @@ export default function FormPage() {
     if (formId) {
       loadForm();
     }
-  }, [formId]);
+  }, [formId, loadForm]);
 
   const renderQuestionField = (question: FormQuestion) => {
     switch (question.type) {
@@ -522,13 +550,22 @@ export default function FormPage() {
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">Error</h1>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button
-            onClick={() => router.push("/")}
-            variant="outline"
-            className="w-full"
-          >
-            Go Home
-          </Button>
+          <div className="space-y-2">
+            {canRetry && (
+              <RetryButton
+                onRetry={retry}
+                retryCount={retryCount}
+                className="w-full"
+              />
+            )}
+            <Button
+              onClick={() => router.push("/")}
+              variant="outline"
+              className="w-full"
+            >
+              Go Home
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -644,9 +681,9 @@ export default function FormPage() {
               )}
             </Button>
 
-            {error && (
+            {submissionError && (
               <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">{error}</p>
+                <p className="text-red-700 text-sm">{submissionError}</p>
               </div>
             )}
           </div>

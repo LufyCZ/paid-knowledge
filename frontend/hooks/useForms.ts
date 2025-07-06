@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase, type BountyForm } from "@/lib/supabase";
+import { useRetry } from "./useRetry";
 
 export interface FormData {
   id: string;
@@ -18,14 +19,63 @@ export interface FormData {
 export function useForms() {
   const [featuredForms, setFeaturedForms] = useState<FormData[]>([]);
   const [allForms, setAllForms] = useState<FormData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   // Initialize client-side state
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const fetchForms = useCallback(async () => {
+    // Use a consistent date string to avoid hydration issues
+    const currentDate = new Date().toISOString();
+
+    // Fetch all active, public forms that haven't expired
+    const { data: forms, error: formsError } = await supabase
+      .from("bounty_forms")
+      .select("*")
+      .eq("status", "active")
+      .eq("visibility", "Public")
+      .gt("end_date", currentDate)
+      .order("created_at", { ascending: false });
+
+    if (formsError) {
+      throw formsError;
+    }
+
+    // Transform the data
+    const transformedForms = forms?.map(transformForm) || [];
+
+    // Split into featured and all forms
+    const featured = transformedForms.filter((form) => form.featured);
+    const all = transformedForms; // Include ALL forms (both featured and non-featured)
+
+    setFeaturedForms(featured);
+    setAllForms(all);
+  }, []);
+
+  // Use retry mechanism for fetching forms
+  const {
+    execute: executeFetch,
+    isLoading,
+    error,
+    retryCount,
+    canRetry,
+    retry,
+  } = useRetry(fetchForms, {
+    maxRetries: 3,
+    initialDelay: 1000,
+    shouldRetry: (error, attempt) => {
+      // Retry on network errors or server errors
+      return (
+        attempt < 3 &&
+        (error?.code === "NETWORK_ERROR" ||
+          error?.message?.includes("network") ||
+          error?.message?.includes("timeout") ||
+          error?.status >= 500)
+      );
+    },
+  });
 
   // Convert Supabase form to our display format
   const transformForm = (form: BountyForm): FormData => {
@@ -92,55 +142,20 @@ export function useForms() {
     return "5 min"; // Default duration
   };
 
-  const fetchForms = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Use a consistent date string to avoid hydration issues
-      const currentDate = new Date().toISOString();
-
-      // Fetch all active, public forms that haven't expired
-      const { data: forms, error: formsError } = await supabase
-        .from("bounty_forms")
-        .select("*")
-        .eq("status", "active")
-        .eq("visibility", "Public")
-        .gt("end_date", currentDate)
-        .order("created_at", { ascending: false });
-
-      if (formsError) {
-        throw formsError;
-      }
-
-      // Transform the data
-      const transformedForms = forms?.map(transformForm) || [];
-
-      // Split into featured and all forms
-      const featured = transformedForms.filter((form) => form.featured);
-      const all = transformedForms; // Include ALL forms (both featured and non-featured)
-
-      setFeaturedForms(featured);
-      setAllForms(all);
-    } catch (err) {
-      console.error("Error fetching forms:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch forms");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (isClient) {
-      fetchForms();
+      executeFetch().catch(console.error);
     }
-  }, [isClient]);
+  }, [isClient, executeFetch]);
 
   return {
     featuredForms,
     allForms,
     isLoading: isLoading || !isClient, // Keep loading until client-side
     error,
-    refreshForms: fetchForms,
+    retryCount,
+    canRetry,
+    refreshForms: executeFetch,
+    retry,
   };
 }

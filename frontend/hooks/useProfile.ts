@@ -1,22 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { UserProfile, VerificationLog } from "@/lib/supabase";
 import { useWallet } from "./useWallet";
+import { useRetry } from "./useRetry";
 
 interface UseProfileReturn {
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
+  retryCount: number;
+  canRetry: boolean;
   refreshProfile: () => Promise<void>;
+  retry: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<boolean>;
 }
 
 export const useProfile = (): UseProfileReturn => {
   const { address: walletAddress, isConnected } = useWallet();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   // Initialize client-side state
@@ -40,39 +42,57 @@ export const useProfile = (): UseProfileReturn => {
     }
   }, [walletAddress, isClient]);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!walletAddress || !isConnected) {
       setProfile(null);
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
+    const response = await fetch(
+      `/api/profile?wallet_address=${encodeURIComponent(walletAddress)}`
+    );
 
-    try {
-      const response = await fetch(
-        `/api/profile?wallet_address=${encodeURIComponent(walletAddress)}`
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch profile: ${response.status} ${response.statusText}`
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch profile");
-      }
-
-      const data = await response.json();
-      setProfile(data.profile);
-
-      // Cache profile in localStorage
-      localStorage.setItem(
-        `profile_${walletAddress.toLowerCase()}`,
-        JSON.stringify(data.profile)
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch profile");
-      console.error("Error fetching profile:", err);
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    const data = await response.json();
+    setProfile(data.profile);
+
+    // Cache profile in localStorage
+    localStorage.setItem(
+      `profile_${walletAddress.toLowerCase()}`,
+      JSON.stringify(data.profile)
+    );
+  }, [walletAddress, isConnected]);
+
+  // Use retry mechanism for fetching profile
+  const {
+    execute: executeProfileFetch,
+    isLoading,
+    error,
+    retryCount,
+    canRetry,
+    retry,
+  } = useRetry(fetchProfile, {
+    maxRetries: 3,
+    initialDelay: 1000,
+    shouldRetry: (error, attempt) => {
+      // Retry on network errors, timeouts, or server errors
+      return (
+        attempt < 3 &&
+        (error?.message?.includes("fetch") ||
+          error?.message?.includes("network") ||
+          error?.message?.includes("timeout") ||
+          error?.message?.includes("500") ||
+          error?.message?.includes("502") ||
+          error?.message?.includes("503") ||
+          error?.message?.includes("504"))
+      );
+    },
+  });
 
   const updateProfile = async (
     updates: Partial<UserProfile>
@@ -108,7 +128,6 @@ export const useProfile = (): UseProfileReturn => {
 
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
       console.error("Error updating profile:", err);
       return false;
     }
@@ -116,16 +135,19 @@ export const useProfile = (): UseProfileReturn => {
 
   // Auto-fetch profile when wallet connects
   useEffect(() => {
-    if (isClient) {
-      fetchProfile();
+    if (isClient && walletAddress && isConnected) {
+      executeProfileFetch().catch(console.error);
     }
-  }, [walletAddress, isConnected, isClient]);
+  }, [walletAddress, isConnected, isClient, executeProfileFetch]);
 
   return {
     profile,
     isLoading,
     error,
-    refreshProfile: fetchProfile,
+    retryCount,
+    canRetry,
+    refreshProfile: executeProfileFetch,
+    retry,
     updateProfile,
   };
 };

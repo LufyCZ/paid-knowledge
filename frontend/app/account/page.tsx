@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useProfile";
 import { useWorldIdVerification } from "@/hooks/useWorldIdVerification";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
+import { ErrorWithRetry } from "@/components/RetryButton";
 import { useMiniKit } from "../providers";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Button } from "@/components/ui/button";
@@ -21,14 +22,22 @@ import Link from "next/link";
 export default function AccountPage() {
   const { isConnected, address, connect, worldchainUsername } = useWallet();
   const { installed } = useMiniKit();
-  const { profile, isLoading, error, refreshProfile, updateProfile } =
-    useProfile();
+  const {
+    profile,
+    isLoading,
+    error,
+    retryCount,
+    canRetry,
+    refreshProfile,
+    retry,
+    updateProfile,
+  } = useProfile();
   const [isClient, setIsClient] = useState(false);
 
   // Add data refresh on navigation events
   useDataRefresh({
     refreshFn: refreshProfile,
-    dependencies: [isConnected, address],
+    dependencies: [], // Remove dependencies to prevent infinite loops
   });
 
   // Prevent hydration issues
@@ -268,12 +277,16 @@ export default function AccountPage() {
 
           {/* Error State */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center">
-                <span className="text-red-600 mr-2">⚠️</span>
-                <p className="text-red-700">{error}</p>
-              </div>
-            </div>
+            <ErrorWithRetry
+              error={error}
+              onRetry={retry}
+              isLoading={isLoading}
+              canRetry={canRetry}
+              retryCount={retryCount}
+              title="Failed to load profile"
+              description="There was an error loading your profile data. Please try again."
+              className="mb-6"
+            />
           )}
 
           {/* Profile Content */}

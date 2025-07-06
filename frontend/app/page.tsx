@@ -5,6 +5,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useForms, type FormData } from "@/hooks/useForms";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { ClientOnly } from "@/components/ClientOnly";
+import { ErrorWithRetry } from "@/components/RetryButton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -16,15 +17,23 @@ const FILTER_OPTIONS = [
 
 export default function HomePage() {
   const { isConnected } = useWallet();
-  const { featuredForms, allForms, isLoading, error, refreshForms } =
-    useForms();
+  const {
+    featuredForms,
+    allForms,
+    isLoading,
+    error,
+    retryCount,
+    canRetry,
+    refreshForms,
+    retry,
+  } = useForms();
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [isClient, setIsClient] = useState(false);
 
   // Add data refresh on navigation events
   useDataRefresh({
     refreshFn: refreshForms,
-    dependencies: [isConnected],
+    dependencies: [], // Remove dependencies to prevent infinite loops
   });
 
   // Prevent hydration mismatch by only rendering after client mount
@@ -198,12 +207,16 @@ export default function HomePage() {
               </div>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center mx-6">
-              <div className="text-4xl mb-4">⚠️</div>
-              <p className="text-red-800 font-medium mb-2">
-                Something went wrong
-              </p>
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="mx-6">
+              <ErrorWithRetry
+                error={error}
+                onRetry={retry}
+                isLoading={isLoading}
+                canRetry={canRetry}
+                retryCount={retryCount}
+                title="Failed to load quests"
+                description="There was an error loading the available quests. Please try again."
+              />
             </div>
           ) : (
             <>

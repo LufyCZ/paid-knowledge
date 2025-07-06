@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useRef } from "react";
 
 interface UseDataRefreshOptions {
   refreshFn: () => void | Promise<void>;
@@ -21,13 +21,23 @@ export function useDataRefresh({
   enableFocusRefresh = true,
   enablePopstateRefresh = true,
 }: UseDataRefreshOptions) {
-  const safeRefresh = useCallback(async () => {
+  const isRefreshingRef = useRef(false);
+
+  const safeRefresh = async () => {
+    // Prevent concurrent refreshes
+    if (isRefreshingRef.current) {
+      return;
+    }
+    
     try {
+      isRefreshingRef.current = true;
       await refreshFn();
     } catch (error) {
       console.error("Error refreshing data:", error);
+    } finally {
+      isRefreshingRef.current = false;
     }
-  }, [refreshFn]);
+  };
 
   // Refresh on visibility change (tab switching)
   useEffect(() => {
@@ -42,7 +52,8 @@ export function useDataRefresh({
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [safeRefresh, enableVisibilityRefresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enableVisibilityRefresh]);
 
   // Refresh on window focus
   useEffect(() => {
@@ -54,7 +65,8 @@ export function useDataRefresh({
 
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
-  }, [safeRefresh, enableFocusRefresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enableFocusRefresh]);
 
   // Refresh on browser back/forward navigation
   useEffect(() => {
@@ -69,12 +81,14 @@ export function useDataRefresh({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [safeRefresh, enablePopstateRefresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enablePopstateRefresh]);
 
-  // Refresh when dependencies change
+  // Refresh when dependencies change (only if dependencies are provided)
   useEffect(() => {
     if (dependencies.length > 0) {
       safeRefresh();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 }

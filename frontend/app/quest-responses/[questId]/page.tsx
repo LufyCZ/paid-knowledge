@@ -28,7 +28,7 @@ export default function QuestResponsesPage() {
   // Add data refresh on navigation events
   useDataRefresh({
     refreshFn: refreshResponses,
-    dependencies: [address, questId],
+    dependencies: [], // Remove dependencies to prevent infinite loops
   });
 
   // Get quest name from URL params if available

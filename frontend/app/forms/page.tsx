@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getBountyForms } from "@/lib/forms";
 import { BountyForm } from "@/lib/supabase";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
+import { useRetry } from "@/hooks/useRetry";
+import { ErrorWithRetry } from "@/components/RetryButton";
 import { Button } from "@/components/ui/button";
 
 export default function FormsListPage() {
   const [allForms, setAllForms] = useState<BountyForm[]>([]);
   const [filteredForms, setFilteredForms] = useState<BountyForm[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Filter and sort states
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,45 +24,45 @@ export default function FormsListPage() {
   const [tokenFilter, setTokenFilter] = useState<"All" | "USDC" | "WLD">("All");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
-  const loadForms = async () => {
-    try {
-      setLoading(true);
-      const result = await getBountyForms();
-      if (!result.success) {
-        setError(result.error || "Failed to load forms");
-        return;
-      }
-
-      // Filter to only show active, public forms within date range
-      const now = new Date();
-      const activeForms = (result.data || []).filter((form) => {
-        const startDate = new Date(form.start_date);
-        const endDate = new Date(form.end_date);
-        return (
-          form.status === "active" &&
-          form.visibility === "Public" &&
-          now >= startDate &&
-          now <= endDate
-        );
-      });
-
-      setAllForms(activeForms);
-    } catch (err) {
-      console.error("Error loading forms:", err);
-      setError(err instanceof Error ? err.message : "Failed to load forms");
-    } finally {
-      setLoading(false);
+  const loadForms = useCallback(async () => {
+    const result = await getBountyForms();
+    if (result.success && result.data) {
+      setAllForms(result.data);
+    } else {
+      throw new Error(result.error || "Failed to load forms");
     }
-  };
+  }, []);
+
+  // Use retry mechanism for loading forms
+  const {
+    execute: executeLoadForms,
+    isLoading: loading,
+    error,
+    retryCount,
+    canRetry,
+    retry,
+  } = useRetry(loadForms, {
+    maxRetries: 3,
+    initialDelay: 1000,
+    shouldRetry: (error, attempt) => {
+      return (
+        attempt < 3 &&
+        (error?.message?.includes("fetch") ||
+          error?.message?.includes("network") ||
+          error?.message?.includes("timeout") ||
+          error?.message?.includes("Failed to load"))
+      );
+    },
+  });
 
   // Add data refresh on navigation events
   useDataRefresh({
-    refreshFn: loadForms,
+    refreshFn: executeLoadForms,
   });
 
   useEffect(() => {
-    loadForms();
-  }, []);
+    executeLoadForms().catch(console.error);
+  }, [executeLoadForms]);
 
   // Apply filters and sorting
   useEffect(() => {
@@ -130,11 +130,17 @@ export default function FormsListPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center p-6 bg-white rounded-lg shadow-lg max-w-md">
-          <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Error</h1>
-          <p className="text-gray-600">{error}</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <ErrorWithRetry
+            error={error}
+            onRetry={retry}
+            isLoading={loading}
+            canRetry={canRetry}
+            retryCount={retryCount}
+            title="Failed to load forms"
+            description="There was an error loading the available forms. Please try again."
+          />
         </div>
       </div>
     );

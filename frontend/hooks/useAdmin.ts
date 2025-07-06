@@ -1,51 +1,70 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminService } from "../lib/supabase-admin";
+import { useRetry } from "./useRetry";
 
 // Hook for admin form management
 export const useAdminForms = () => {
   const [forms, setForms] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchForms = async () => {
-    setLoading(true);
-    setError(null);
-
+  const fetchForms = useCallback(async () => {
     const result = await AdminService.getAllForms();
 
     if (result.success) {
       setForms(result.data || []);
     } else {
-      setError(result.error || "Failed to fetch forms");
+      throw new Error(result.error || "Failed to fetch forms");
     }
+  }, []);
 
-    setLoading(false);
-  };
+  // Use retry mechanism for fetching forms
+  const {
+    execute: executeFetchForms,
+    isLoading: loading,
+    error,
+    retryCount,
+    canRetry,
+    retry,
+  } = useRetry(fetchForms, {
+    maxRetries: 3,
+    initialDelay: 1000,
+    shouldRetry: (error, attempt) => {
+      return (
+        attempt < 3 &&
+        (error?.message?.includes("fetch") ||
+          error?.message?.includes("network") ||
+          error?.message?.includes("timeout") ||
+          error?.message?.includes("Failed to fetch"))
+      );
+    },
+  });
+
+  const [operationLoading, setOperationLoading] = useState(false);
+  const [operationError, setOperationError] = useState<string | null>(null);
 
   const updateFormStatus = async (
     formIds: string[],
     status: "draft" | "active" | "completed" | "cancelled"
   ) => {
-    setLoading(true);
-    setError(null);
+    setOperationLoading(true);
+    setOperationError(null);
 
     const result = await AdminService.bulkUpdateFormStatus(formIds, status);
 
     if (result.success) {
       // Refresh the forms list
-      await fetchForms();
+      await executeFetchForms();
     } else {
-      setError(result.error || "Failed to update form status");
+      setOperationError(result.error || "Failed to update form status");
     }
 
-    setLoading(false);
+    setOperationLoading(false);
     return result;
   };
 
   const deleteForm = async (formId: string) => {
-    setLoading(true);
-    setError(null);
+    setOperationLoading(true);
+    setOperationError(null);
 
     const result = await AdminService.deleteForm(formId);
 
@@ -53,22 +72,26 @@ export const useAdminForms = () => {
       // Remove from local state
       setForms((prev) => prev.filter((form) => form.id !== formId));
     } else {
-      setError(result.error || "Failed to delete form");
+      setOperationError(result.error || "Failed to delete form");
     }
 
-    setLoading(false);
+    setOperationLoading(false);
     return result;
   };
 
   useEffect(() => {
-    fetchForms();
-  }, []);
+    executeFetchForms().catch(console.error);
+  }, [executeFetchForms]);
 
   return {
     forms,
     loading,
-    error,
-    refetch: fetchForms,
+    error: error || operationError,
+    retryCount,
+    canRetry,
+    operationLoading,
+    refetch: executeFetchForms,
+    retry,
     updateFormStatus,
     deleteForm,
   };
@@ -77,65 +100,100 @@ export const useAdminForms = () => {
 // Hook for admin dashboard stats
 export function useAdminStats() {
   const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchStats = async () => {
-    setLoading(true);
-    setError(null);
-
     const result = await AdminService.getFormStats();
 
     if (result.success) {
       setStats(result.data);
     } else {
-      setError(result.error || "Failed to fetch stats");
+      throw new Error(result.error || "Failed to fetch stats");
     }
-
-    setLoading(false);
   };
 
+  // Use retry mechanism for fetching stats
+  const {
+    execute: executeFetchStats,
+    isLoading: loading,
+    error,
+    retryCount,
+    canRetry,
+    retry,
+  } = useRetry(fetchStats, {
+    maxRetries: 3,
+    initialDelay: 1000,
+    shouldRetry: (error, attempt) => {
+      return (
+        attempt < 3 &&
+        (error?.message?.includes("fetch") ||
+          error?.message?.includes("network") ||
+          error?.message?.includes("timeout") ||
+          error?.message?.includes("Failed to fetch"))
+      );
+    },
+  });
+
   useEffect(() => {
-    fetchStats();
-  }, []);
+    executeFetchStats().catch(console.error);
+  }, [executeFetchStats]);
 
   return {
     stats,
     loading,
     error,
-    refetch: fetchStats,
+    retryCount,
+    canRetry,
+    refetch: executeFetchStats,
+    retry,
   };
 }
 
 // Hook for managing form responses
 export function useAdminResponses(formId: string) {
   const [responses, setResponses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [operationLoading, setOperationLoading] = useState(false);
+  const [operationError, setOperationError] = useState<string | null>(null);
 
   const fetchResponses = async () => {
     if (!formId) return;
-
-    setLoading(true);
-    setError(null);
 
     const result = await AdminService.getFormResponses(formId);
 
     if (result.success) {
       setResponses(result.data || []);
     } else {
-      setError(result.error || "Failed to fetch responses");
+      throw new Error(result.error || "Failed to fetch responses");
     }
-
-    setLoading(false);
   };
+
+  // Use retry mechanism for fetching responses
+  const {
+    execute: executeFetchResponses,
+    isLoading: loading,
+    error,
+    retryCount,
+    canRetry,
+    retry,
+  } = useRetry(fetchResponses, {
+    maxRetries: 3,
+    initialDelay: 1000,
+    shouldRetry: (error, attempt) => {
+      return (
+        attempt < 3 &&
+        (error?.message?.includes("fetch") ||
+          error?.message?.includes("network") ||
+          error?.message?.includes("timeout") ||
+          error?.message?.includes("Failed to fetch"))
+      );
+    },
+  });
 
   const updateResponseStatus = async (
     responseId: string,
     status: "approved" | "rejected" | "paid"
   ) => {
-    setLoading(true);
-    setError(null);
+    setOperationLoading(true);
+    setOperationError(null);
 
     const result = await AdminService.updateResponseStatus(responseId, status);
 
@@ -147,16 +205,16 @@ export function useAdminResponses(formId: string) {
         )
       );
     } else {
-      setError(result.error || "Failed to update response status");
+      setOperationError(result.error || "Failed to update response status");
     }
 
-    setLoading(false);
+    setOperationLoading(false);
     return result;
   };
 
   const bulkApproveResponses = async (responseIds: string[]) => {
-    setLoading(true);
-    setError(null);
+    setOperationLoading(true);
+    setOperationError(null);
 
     const result = await AdminService.bulkApproveResponses(responseIds);
 
@@ -170,22 +228,28 @@ export function useAdminResponses(formId: string) {
         )
       );
     } else {
-      setError(result.error || "Failed to bulk approve responses");
+      setOperationError(result.error || "Failed to bulk approve responses");
     }
 
-    setLoading(false);
+    setOperationLoading(false);
     return result;
   };
 
   useEffect(() => {
-    fetchResponses();
-  }, [formId]);
+    if (formId) {
+      executeFetchResponses().catch(console.error);
+    }
+  }, [formId, executeFetchResponses]);
 
   return {
     responses,
     loading,
-    error,
-    refetch: fetchResponses,
+    error: error || operationError,
+    retryCount,
+    canRetry,
+    operationLoading,
+    refetch: executeFetchResponses,
+    retry,
     updateResponseStatus,
     bulkApproveResponses,
   };
