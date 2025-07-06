@@ -93,10 +93,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     setIsClient(true);
     MiniKit.install();
     setInstalled(true);
-
-    import("eruda").then((eruda) => {
-      eruda.default.init();
-    });
   }, []);
 
   // Don't render MiniKit-dependent components until client-side
