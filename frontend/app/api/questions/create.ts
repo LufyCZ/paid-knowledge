@@ -1,7 +1,7 @@
 import { hashQuestion, questionSchema } from '@/lib/questions';
 import z from 'zod';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
-import { Address, maxUint256, toHex } from 'viem';
+import { Address, maxUint256, parseUnits, toHex } from 'viem';
 import { publicProcedure } from '../trpc';
 
 const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID;
@@ -27,6 +27,11 @@ async function getPayment(transactionId: string): Promise<{ inputToken: string, 
     }
   ).then(res => res.json());
 }
+
+const TOKEN_DECIMALS = {
+  WLD: 18,
+  USDC: 6,
+} as const;
 
 export const questionCreate = publicProcedure
   .input(z.object({
@@ -75,7 +80,7 @@ export const questionCreate = publicProcedure
     if (!paymentToken) {
       throw new Error("Unsupported payment token");
     }
-    const amountPerAnswer = BigInt(input.question.reward?.amount || 0);
+    const amountPerAnswer = parseUnits((`${input.question.reward?.amount || 0}`), TOKEN_DECIMALS[input.question.reward?.currency || 'WLD']);
 
     // Write the question to WorldChain
     const txHash = await client.writeContract({

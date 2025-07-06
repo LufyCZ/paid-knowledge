@@ -252,10 +252,35 @@ export const imageFormEntrySchema = z.object({
   max: z.number(),
 });
 
+export const checkboxFormEntrySchema = z.object({
+  type: z.literal("checkbox"),
+  id: z.string(),
+  label: z.string(),
+})
+
+export const multipleChoiceFormEntrySchema = z.object({
+  type: z.literal("multiple_choice"),
+  id: z.string(),
+  label: z.string(),
+  options: z.array(z.string()),
+  required: z.boolean().optional(),
+});
+
+export const photoForm = z.object({
+  type: z.literal("photo"),
+  id: z.string(),
+  label: z.string(),
+  requirements: z.string().optional(),
+  location: z.string().optional(),
+})
+
 export const formEntrySchema = z.discriminatedUnion("type", [
   textFormEntrySchema,
   numberFormEntrySchema,
   imageFormEntrySchema,
+  checkboxFormEntrySchema,
+  multipleChoiceFormEntrySchema,
+  photoForm
 ]);
 export const formSchema = z.array(formEntrySchema);
 

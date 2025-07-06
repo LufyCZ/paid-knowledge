@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import {
   useProfile,
-  isVerified,
   canVerifyAt,
   getVerificationLevel,
 } from "@/hooks/useProfile";
@@ -14,7 +13,6 @@ import { ErrorWithRetry } from "@/components/RetryButton";
 import { useMiniKit } from "../providers";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Button } from "@/components/ui/button";
-import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { ClientOnly } from "@/components/ClientOnly";
 import { QuestManagement } from "@/components/QuestManagementMobile";
 import Link from "next/link";
@@ -72,7 +70,7 @@ export default function AccountPage() {
 
   // Form states
   const [verificationInProgress, setVerificationInProgress] = useState<
-    "Device" | "Orb" | null
+    "device" | "orb" | null
   >(null);
 
   // Get username from multiple sources
@@ -159,26 +157,26 @@ export default function AccountPage() {
   }, [profile, username, updateProfile]);
 
   const handleDeviceVerify = async () => {
-    setVerificationInProgress("Device");
+    setVerificationInProgress("device");
     await deviceVerification.verify();
   };
 
   const handleOrbVerify = async () => {
-    setVerificationInProgress("Orb");
+    setVerificationInProgress("orb");
     await orbVerification.verify();
   };
 
   const getVerificationBadge = () => {
     const level = getVerificationLevel(profile);
     switch (level) {
-      case "Orb":
+      case "orb":
         return (
           <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-sm">
             <span className="mr-2">🔮</span>
             Orb Verified
           </div>
         );
-      case "Device":
+      case "device":
         return (
           <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">
             <span className="mr-2">📱</span>
@@ -437,12 +435,12 @@ export default function AccountPage() {
                             onClick={handleDeviceVerify}
                             disabled={
                               deviceVerification.isLoading ||
-                              verificationInProgress === "Device"
+                              verificationInProgress === "device"
                             }
                             size="sm"
                             className="w-full sm:w-auto"
                           >
-                            {verificationInProgress === "Device"
+                            {verificationInProgress === "device"
                               ? "Verifying..."
                               : "Verify Now"}
                           </Button>
@@ -478,12 +476,12 @@ export default function AccountPage() {
                             onClick={handleOrbVerify}
                             disabled={
                               orbVerification.isLoading ||
-                              verificationInProgress === "Orb"
+                              verificationInProgress === "orb"
                             }
                             size="sm"
                             className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
                           >
-                            {verificationInProgress === "Orb"
+                            {verificationInProgress === "orb"
                               ? "Verifying..."
                               : "Verify Now"}
                           </Button>
@@ -540,7 +538,7 @@ export default function AccountPage() {
                     My Quests
                   </h2>
                   <p className="text-gray-600">
-                    Manage the quests you've created and review submissions
+                    {`Manage the quests you've created and review submissions`}
                   </p>
                 </div>
 

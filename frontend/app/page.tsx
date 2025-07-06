@@ -8,7 +8,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTRPC } from "@/lib/trpc";
 import { useQuery } from "@tanstack/react-query";
-import { formatUnits } from "viem";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All" },
@@ -17,11 +16,6 @@ const FILTER_OPTIONS = [
 ] as const;
 
 const FEATURED_FORM_IDS: string[] = [];
-
-const TOKEN_DECIMALS = {
-  WLD: 18,
-  USDC: 6,
-} as const;
 
 export default function HomePage() {
   const { isConnected } = useWallet();
@@ -61,8 +55,10 @@ export default function HomePage() {
   );
 
   // Helper function to get eligibility badge
-  const getEligibilityBadge = (eligibility: "orb" | "device") => {
-    switch (eligibility) {
+  const getEligibilityBadge = (
+    verificationLevel: "orb" | "device" | "none"
+  ) => {
+    switch (verificationLevel) {
       case "orb":
         return (
           <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-700">
@@ -81,7 +77,7 @@ export default function HomePage() {
   };
 
   // Helper function to format date (hydration-safe)
-  const formatEndDate = (dateString: number) => {
+  const formatEndDate = (dateString: string) => {
     if (!isClient) return ""; // Return empty string during SSR
 
     const date = new Date(dateString);
@@ -154,11 +150,7 @@ export default function HomePage() {
           </div>
           {form.reward ? (
             <div className="text-lg font-semibold text-gray-900">
-              {formatUnits(
-                BigInt(form.reward.amount),
-                TOKEN_DECIMALS[form.reward.currency]
-              )}{" "}
-              {form.reward.currency}
+              {form.reward.amount} {form.reward.currency}
             </div>
           ) : null}
         </div>

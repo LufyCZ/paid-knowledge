@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { UserProfile, VerificationLog } from "@/lib/supabase";
+import { UserProfile } from "@/lib/supabase";
 import { useWallet } from "./useWallet";
 import { useRetry } from "./useRetry";
 
@@ -170,8 +170,8 @@ export const clearProfileCache = (walletAddress?: string) => {
 
 export const getVerificationLevel = (
   profile: UserProfile | null
-): "None" | "Device" | "Orb" => {
-  return profile?.verification_level || "None";
+): "none" | "device" | "orb" => {
+  return profile?.verification_level === 'Device' ? 'device' : profile?.verification_level === 'Orb' ? "orb" : "none";
 };
 
 export const isVerified = (

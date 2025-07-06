@@ -1,33 +1,62 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBountyForm, CreateFormData } from "../../lib/forms";
+import { formEntrySchema } from "../../lib/forms";
 import { useWallet } from "../../hooks/useWallet";
 import { PaymentModal } from "../../components/PaymentModal";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { usePhoto } from "@/hooks/usePhoto";
+import z from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { useTRPC } from "@/lib/trpc";
 
 const QUESTION_TYPES = [
-  { name: "Short Text", icon: "📝", description: "Brief text response" },
-  { name: "Long Text", icon: "📄", description: "Detailed text response" },
-  { name: "Yes/No", icon: "✅", description: "Simple yes or no answer" },
-  { name: "Single Choice", icon: "🔘", description: "Pick one option" },
-  { name: "Multiple Choice", icon: "☑️", description: "Pick multiple options" },
-  { name: "Dropdown", icon: "⬇️", description: "Select from dropdown" },
-  { name: "Checkbox", icon: "✔️", description: "Check boxes" },
-  { name: "Picture Choice", icon: "🖼️", description: "Choose from images" },
-  { name: "Picture Answer", icon: "📸", description: "Upload an image" },
-  { name: "Video Answer", icon: "🎥", description: "Record or upload video" },
+  {
+    name: "Short Text",
+    icon: "📝",
+    description: "Brief text response",
+    formType: "text" as const,
+    minLength: 1,
+    maxLength: 100,
+    isPreset: true,
+  },
+  {
+    name: "Long Text",
+    icon: "📄",
+    description: "Detailed text response",
+    formType: "text" as const,
+    minLength: 10,
+    maxLength: 1000,
+    isPreset: true,
+  },
+  {
+    name: "Number",
+    icon: "🔢",
+    description: "Number response",
+    formType: "number" as const,
+  },
+  {
+    name: "Multiple Choice",
+    icon: "☑️",
+    description: "Pick multiple options",
+    formType: "multiple_choice" as const,
+  },
+  {
+    name: "Checkbox",
+    icon: "✔️",
+    description: "Check box",
+    formType: "checkbox" as const,
+  },
+  {
+    name: "Picture Answer",
+    icon: "📸",
+    description: "Upload an image",
+    formType: "image" as const,
+  },
 ];
 
-type Question = {
-  id: number;
-  title: string;
-  description: string;
-  type: string;
-  options?: string[]; // for choice types
-};
+type Question = z.infer<typeof formEntrySchema>;
 
 type BuilderType = "survey" | "photo" | null;
 
@@ -52,20 +81,75 @@ export default function FormBuilder() {
   const [showQuestSetup, setShowQuestSetup] = useState(false);
   const [showPaymentStep, setShowPaymentStep] = useState(false);
 
+  // Note: setPhoto is available but not used in this component
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { setPhoto } = usePhoto();
+  // Note: setPhoto is available for future use
 
   const openTypeMenu = (index?: number) => {
     setInsertIndex(index);
     setShowTypeMenu(true);
   };
 
-  const addQuestion = (type: string, index?: number) => {
-    const newQuestion: Question = {
-      id: Date.now(),
-      title: "",
-      description: "",
-      type: type,
+  const addQuestion = (questionTypeName: string, index?: number) => {
+    const questionType = QUESTION_TYPES.find(
+      (t) => t.name === questionTypeName
+    );
+    if (!questionType) return;
+
+    const baseQuestion = {
+      id: crypto.randomUUID(),
+      label: "",
     };
+
+    let newQuestion: Question;
+
+    switch (questionType.formType) {
+      case "text":
+        newQuestion = {
+          ...baseQuestion,
+          type: "text",
+          min: questionType.minLength,
+          max: questionType.maxLength,
+          placeholder: "",
+          required: false,
+        };
+        break;
+      case "number":
+        newQuestion = {
+          ...baseQuestion,
+          type: "number",
+          placeholder: "",
+          required: false,
+          integer: false,
+        };
+        break;
+      case "image":
+        newQuestion = {
+          ...baseQuestion,
+          type: "image",
+          min: 1,
+          max: 1,
+        };
+        break;
+      case "checkbox":
+        newQuestion = {
+          ...baseQuestion,
+          type: "checkbox",
+        };
+        break;
+      case "multiple_choice":
+        newQuestion = {
+          ...baseQuestion,
+          type: "multiple_choice",
+          options: ["Option 1", "Option 2"],
+          required: false,
+        };
+        break;
+      default:
+        return; // Invalid type
+    }
+
     const updated = [...questions];
     if (index !== undefined) {
       updated.splice(index + 1, 0, newQuestion);
@@ -77,7 +161,7 @@ export default function FormBuilder() {
     setInsertIndex(undefined);
   };
 
-  const deleteQuestion = (id: number) => {
+  const deleteQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
@@ -100,13 +184,17 @@ export default function FormBuilder() {
     }
   };
 
-  const updateQuestion = (id: number, key: keyof Question, value: any) => {
+  const updateQuestion = (
+    id: string,
+    key: string,
+    value: string | number | boolean | string[] | undefined
+  ) => {
     setQuestions((prev) =>
       prev.map((q) => (q.id === id ? { ...q, [key]: value } : q))
     );
   };
 
-  const updateOptions = (id: number, newOptions: string[]) => {
+  const updateOptions = (id: string, newOptions: string[]) => {
     setQuestions((prev) =>
       prev.map((q) => (q.id === id ? { ...q, options: newOptions } : q))
     );
@@ -340,7 +428,7 @@ export default function FormBuilder() {
           <PhotoQuestSetupPage
             photoTask={photoTask}
             onBack={() => setShowQuestSetup(false)}
-            onContinueToPayment={(formData) => {
+            onContinueToPayment={() => {
               setShowQuestSetup(false);
               setShowPaymentStep(true);
             }}
@@ -501,7 +589,7 @@ export default function FormBuilder() {
             description: string;
             startDate: string;
             endDate: string;
-            userEligibility: "Orb" | "Device" | "All";
+            verificationRequired: "orb" | "device" | "none";
           }) => {
             // Save quest data to localStorage for the payment step
             localStorage.setItem("pendingFormData", JSON.stringify(formData));
@@ -539,8 +627,12 @@ function QuestionCard({
   question: Question;
   index: number;
   totalQuestions: number;
-  updateQuestion: (id: number, key: keyof Question, value: any) => void;
-  updateOptions: (id: number, newOptions: string[]) => void;
+  updateQuestion: (
+    id: string,
+    key: string,
+    value: string | number | boolean | string[] | undefined
+  ) => void;
+  updateOptions: (id: string, newOptions: string[]) => void;
   onAddQuestion: () => void;
   onDeleteQuestion: () => void;
   onMoveUp: () => void;
@@ -613,40 +705,319 @@ function QuestionCard({
           <input
             type="text"
             placeholder="Enter your question..."
-            value={question.title}
+            value={question.label}
             onChange={(e) =>
-              updateQuestion(question.id, "title", e.target.value)
+              updateQuestion(question.id, "label", e.target.value)
             }
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description (optional)
-          </label>
-          <input
-            type="text"
-            placeholder="Add helpful context..."
-            value={question.description}
-            onChange={(e) =>
-              updateQuestion(question.id, "description", e.target.value)
-            }
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-          />
-        </div>
+        {/* Type-specific configuration */}
+        {question.type === "text" && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Placeholder (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter placeholder text..."
+                value={question.placeholder || ""}
+                onChange={(e) =>
+                  updateQuestion(question.id, "placeholder", e.target.value)
+                }
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Min Length
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={question.min || ""}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "min",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  disabled={QUESTION_TYPES.some(
+                    (t) =>
+                      t.formType === "text" &&
+                      t.isPreset &&
+                      question.min === t.minLength &&
+                      question.max === t.maxLength
+                  )}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Length
+                </label>
+                <input
+                  type="number"
+                  placeholder="100"
+                  value={question.max || ""}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "max",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  disabled={QUESTION_TYPES.some(
+                    (t) =>
+                      t.formType === "text" &&
+                      t.isPreset &&
+                      question.min === t.minLength &&
+                      question.max === t.maxLength
+                  )}
+                />
+              </div>
+            </div>
+            {QUESTION_TYPES.some(
+              (t) =>
+                t.formType === "text" &&
+                t.isPreset &&
+                question.min === t.minLength &&
+                question.max === t.maxLength
+            ) && (
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  Min/Max values are preset for{" "}
+                  {
+                    QUESTION_TYPES.find(
+                      (t) =>
+                        t.formType === "text" &&
+                        t.isPreset &&
+                        question.min === t.minLength &&
+                        question.max === t.maxLength
+                    )?.name
+                  }
+                </p>
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`required-${question.id}`}
+                checked={question.required || false}
+                onChange={(e) =>
+                  updateQuestion(question.id, "required", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor={`required-${question.id}`}
+                className="text-sm font-medium text-gray-700"
+              >
+                Required field
+              </label>
+            </div>
+          </div>
+        )}
 
-        {[
-          "Single Choice",
-          "Multiple Choice",
-          "Dropdown",
-          "Checkbox",
-          "Picture Choice",
-        ].includes(question.type) && (
+        {question.type === "number" && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Placeholder (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter placeholder text..."
+                value={question.placeholder || ""}
+                onChange={(e) =>
+                  updateQuestion(question.id, "placeholder", e.target.value)
+                }
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Min Value
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={question.min || ""}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "min",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Value
+                </label>
+                <input
+                  type="number"
+                  placeholder="100"
+                  value={question.max || ""}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "max",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`integer-${question.id}`}
+                checked={question.integer || false}
+                onChange={(e) =>
+                  updateQuestion(question.id, "integer", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor={`integer-${question.id}`}
+                className="text-sm font-medium text-gray-700"
+              >
+                Integer only (no decimals)
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`required-${question.id}`}
+                checked={question.required || false}
+                onChange={(e) =>
+                  updateQuestion(question.id, "required", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor={`required-${question.id}`}
+                className="text-sm font-medium text-gray-700"
+              >
+                Required field
+              </label>
+            </div>
+          </div>
+        )}
+
+        {question.type === "image" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Min Images *
+                </label>
+                <input
+                  type="number"
+                  placeholder="1"
+                  min="1"
+                  value={question.min || 1}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "min",
+                      parseInt(e.target.value) || 1
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Images *
+                </label>
+                <input
+                  type="number"
+                  placeholder="1"
+                  min="1"
+                  value={question.max || 1}
+                  onChange={(e) =>
+                    updateQuestion(
+                      question.id,
+                      "max",
+                      parseInt(e.target.value) || 1
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-600">📸</span>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Image Upload
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Users will be able to upload{" "}
+                    {question.min === question.max
+                      ? `${question.min}`
+                      : `${question.min}-${question.max}`}{" "}
+                    image{(question.max || 1) > 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {question.type === "checkbox" && (
+          <div className="p-4 bg-green-50 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">✔️</span>
+              <div>
+                <p className="text-sm font-medium text-green-800">
+                  Simple Checkbox
+                </p>
+                <p className="text-xs text-green-600">
+                  Users can check or uncheck this option
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {question.type === "multiple_choice" && (
           <ChoiceOptionEditor
             options={question.options || []}
             onChange={(opts) => updateOptions(question.id, opts)}
           />
+        )}
+
+        {question.type === "multiple_choice" && (
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id={`required-${question.id}`}
+              checked={question.required || false}
+              onChange={(e) =>
+                updateQuestion(question.id, "required", e.target.checked)
+              }
+              className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label
+              htmlFor={`required-${question.id}`}
+              className="text-sm font-medium text-gray-700"
+            >
+              Required field
+            </label>
+          </div>
         )}
 
         <button
@@ -731,16 +1102,16 @@ function QuestSetupPage({
     description: string;
     startDate: string;
     endDate: string;
-    userEligibility: "Orb" | "Device" | "All";
+    verificationRequired: "orb" | "device" | "none";
   }) => void;
 }) {
   const [formName, setFormName] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [userEligibility, setUserEligibility] = useState<
-    "Orb" | "Device" | "All"
-  >("All");
+  const [verificationRequired, setverificationRequired] = useState<
+    "orb" | "device" | "none"
+  >("none");
   const [error, setError] = useState<string | null>(null);
 
   const { isConnected, connect } = useWallet();
@@ -769,7 +1140,7 @@ function QuestSetupPage({
       description,
       startDate,
       endDate,
-      userEligibility,
+      verificationRequired,
     });
   };
 
@@ -802,7 +1173,7 @@ function QuestSetupPage({
           <div className="mt-3 space-y-2">
             {questions.slice(0, 3).map((q, i) => (
               <div key={q.id} className="text-sm text-gray-500">
-                {i + 1}. {q.title || "Untitled Question"} ({q.type})
+                {i + 1}. {q.label || "Untitled Question"} ({q.type})
               </div>
             ))}
             {questions.length > 3 && (
@@ -909,9 +1280,11 @@ function QuestSetupPage({
               Who can participate? *
             </label>
             <select
-              value={userEligibility}
+              value={verificationRequired}
               onChange={(e) =>
-                setUserEligibility(e.target.value as "Orb" | "Device" | "All")
+                setverificationRequired(
+                  e.target.value as "orb" | "device" | "none"
+                )
               }
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
             >
@@ -920,11 +1293,11 @@ function QuestSetupPage({
               <option value="Orb">Orb verified only</option>
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              {userEligibility === "All" &&
+              {verificationRequired === "none" &&
                 "Anyone with World ID (Device or Orb verification) can participate"}
-              {userEligibility === "Device" &&
+              {verificationRequired === "device" &&
                 "Only users with Device-level World ID verification can participate"}
-              {userEligibility === "Orb" &&
+              {verificationRequired === "orb" &&
                 "Only users with Orb-level World ID verification can participate"}
             </p>
           </div>
@@ -976,14 +1349,14 @@ function PhotoQuestSetupPage({
     description: string;
     startDate: string;
     endDate: string;
-    userEligibility: "Orb" | "Device" | "All";
+    verificationRequired: "Orb" | "Device" | "All";
   }) => void;
 }) {
   const [formName, setFormName] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [userEligibility, setUserEligibility] = useState<
+  const [verificationRequired, setverificationRequired] = useState<
     "Orb" | "Device" | "All"
   >("All");
   const [error, setError] = useState<string | null>(null);
@@ -1014,7 +1387,7 @@ function PhotoQuestSetupPage({
         description,
         startDate,
         endDate,
-        userEligibility,
+        verificationRequired,
       })
     );
 
@@ -1023,7 +1396,7 @@ function PhotoQuestSetupPage({
       description,
       startDate,
       endDate,
-      userEligibility,
+      verificationRequired,
     });
   };
 
@@ -1175,9 +1548,11 @@ function PhotoQuestSetupPage({
                 User Eligibility
               </label>
               <select
-                value={userEligibility}
+                value={verificationRequired}
                 onChange={(e) =>
-                  setUserEligibility(e.target.value as "Orb" | "Device" | "All")
+                  setverificationRequired(
+                    e.target.value as "Orb" | "Device" | "All"
+                  )
                 }
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
               >
@@ -1221,14 +1596,18 @@ function PhotoPaymentStepPage({
     description: string;
     startDate: string;
     endDate: string;
-    userEligibility: "Orb" | "Device" | "All";
+    verificationRequired: "orb" | "device" | "none";
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(true);
 
   const router = useRouter();
-  const { isConnected, address } = useWallet();
+
+  const trpc = useTRPC();
+  const createBountyFormMutation = useMutation(
+    trpc.questions.create.mutationOptions()
+  );
 
   // Get quest data from localStorage
   React.useEffect(() => {
@@ -1256,47 +1635,32 @@ function PhotoPaymentStepPage({
 
     try {
       // Create photo task form with special structure
-      const photoQuestionData = {
-        id: Date.now(),
-        title: photoTask.title,
-        description: `${photoTask.description}\n\nRequirements: ${
-          photoTask.requirements
-        }${photoTask.location ? `\n\nLocation: ${photoTask.location}` : ""}`,
-        type: "Picture Answer",
-        options: photoTask.location ? [photoTask.location] : undefined,
-      };
-
-      const createFormData: CreateFormData = {
-        name: formData.name,
-        description: formData.description,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        visibility: "Public" as const,
-        rewardPerQuestion: payment.rewardPerQuestion,
-        rewardToken: payment.token,
-        userEligibility: formData.userEligibility,
-        questions: [photoQuestionData],
-        creatorWalletAddress: address!,
-        paymentData: {
-          amount: payment.amount,
-          transactionId: payment.transactionId,
-          maxQuestions: payment.maxQuestions,
+      const result = await createBountyFormMutation.mutateAsync({
+        transactionId: payment.transactionId,
+        question: {
+          title: formData.name,
+          description: formData.description,
+          type: "Survey",
+          endDate: formData.endDate,
+          reward: {
+            amount: payment.rewardPerQuestion,
+            currency: payment.token,
+          },
+          verificationLevel: formData.verificationRequired,
+          form: [
+            {
+              id: crypto.randomUUID(),
+              label: photoTask.title,
+              requirements: photoTask.requirements,
+              location: photoTask.location || undefined,
+              type: "photo",
+            },
+          ],
         },
-      };
+      });
 
-      const result = await createBountyForm(createFormData);
-
-      if (result.success) {
-        // Clean up localStorage
-        localStorage.removeItem("pendingFormData");
-        localStorage.removeItem("pendingPhotoTask");
-
-        // Navigate to success page
-        router.push(`/form-success?formId=${result.form?.id}&type=photo`);
-      } else {
-        setError(result.error || "Failed to create photo quest");
-        setShowPaymentModal(true);
-      }
+      // Navigate to success page
+      router.push(`/form-success?formId=${result.blobId}&type=photo`);
     } catch (err) {
       console.error("Error creating photo quest:", err);
       setError("Failed to create photo quest. Please try again.");
@@ -1413,9 +1777,9 @@ function PhotoPaymentStepPage({
                 Eligibility:
               </span>
               <p className="text-gray-900">
-                {formData.userEligibility === "All"
+                {formData.verificationRequired === "none"
                   ? "All Users"
-                  : formData.userEligibility === "Device"
+                  : formData.verificationRequired === "device"
                   ? "Device Verified Only"
                   : "Orb Verified Only"}
               </p>
@@ -1428,8 +1792,9 @@ function PhotoPaymentStepPage({
             <span className="text-blue-600">ℹ️</span>
             <div>
               <p className="text-sm text-blue-800">
-                You'll pay rewards for each photo submission that you approve.
-                Set your reward amount and fund your quest to get started.
+                You&apos;ll pay rewards for each photo submission that you
+                approve. Set your reward amount and fund your quest to get
+                started.
               </p>
             </div>
           </div>
@@ -1452,14 +1817,18 @@ function PaymentStepPage({
     description: string;
     startDate: string;
     endDate: string;
-    userEligibility: "Orb" | "Device" | "All";
+    verificationRequired: "orb" | "device" | "none";
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(true);
 
   const router = useRouter();
-  const { isConnected, address } = useWallet();
+
+  const trpc = useTRPC();
+  const createBountyFormMutation = useMutation(
+    trpc.questions.create.mutationOptions()
+  );
 
   // Get quest data from localStorage
   React.useEffect(() => {
@@ -1487,44 +1856,24 @@ function PaymentStepPage({
 
     try {
       // Convert questions to the format expected by createBountyForm
-      const questionsData = questions.map((q, index) => ({
-        id: q.id,
-        title: q.title,
-        description: q.description,
-        type: q.type,
-        options: q.options,
-      }));
-
-      const createFormData: CreateFormData = {
-        name: formData.name,
-        description: formData.description,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        visibility: "Public" as const,
-        rewardPerQuestion: payment.rewardPerQuestion,
-        rewardToken: payment.token,
-        userEligibility: formData.userEligibility,
-        questions: questionsData,
-        creatorWalletAddress: address!,
-        paymentData: {
-          amount: payment.amount,
-          transactionId: payment.transactionId,
-          maxQuestions: payment.maxQuestions,
+      const result = await createBountyFormMutation.mutateAsync({
+        transactionId: payment.transactionId,
+        question: {
+          title: formData.name,
+          description: formData.description,
+          type: "Survey",
+          endDate: formData.endDate,
+          reward: {
+            amount: payment.rewardPerQuestion,
+            currency: payment.token,
+          },
+          verificationLevel: formData.verificationRequired,
+          form: questions,
         },
-      };
+      });
 
-      const result = await createBountyForm(createFormData);
-
-      if (result.success) {
-        // Clean up localStorage
-        localStorage.removeItem("pendingFormData");
-
-        // Navigate to success page
-        router.push(`/form-success?formId=${result.form?.id}&type=survey`);
-      } else {
-        setError(result.error || "Failed to create survey quest");
-        setShowPaymentModal(true);
-      }
+      // Navigate to success page
+      router.push(`/form-success?formId=${result.blobId}&type=survey`);
     } catch (err) {
       console.error("Error creating survey quest:", err);
       setError("Failed to create survey quest. Please try again.");
@@ -1641,9 +1990,9 @@ function PaymentStepPage({
                 Eligibility:
               </span>
               <p className="text-gray-900">
-                {formData.userEligibility === "All"
+                {formData.verificationRequired === "none"
                   ? "All Users"
-                  : formData.userEligibility === "Device"
+                  : formData.verificationRequired === "device"
                   ? "Device Verified Only"
                   : "Orb Verified Only"}
               </p>
@@ -1656,8 +2005,9 @@ function PaymentStepPage({
             <span className="text-blue-600">ℹ️</span>
             <div>
               <p className="text-sm text-blue-800">
-                You'll pay rewards for each survey response that you approve.
-                Set your reward amount and fund your quest to get started.
+                You&apos;ll pay rewards for each survey response that you
+                approve. Set your reward amount and fund your quest to get
+                started.
               </p>
             </div>
           </div>
