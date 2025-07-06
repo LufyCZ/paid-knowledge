@@ -24,18 +24,18 @@ export function PaymentExample() {
   const handlePayUSDC = async () => {
     try {
       const result = await payUSDC(recipient, amount, description);
-      console.log("Payment result:", result);
+      console.log("Payment result 2:", result);
     } catch (error) {
-      console.error("Payment failed:", error);
+      console.error("Payment failed 2:", error);
     }
   };
 
   const handlePayWLD = async () => {
     try {
       const result = await payWLD(recipient, amount, description);
-      console.log("Payment result:", result);
+      console.log("Payment result 2:", result);
     } catch (error) {
-      console.error("Payment failed:", error);
+      console.error("Payment failed 2:", error);
     }
   };
 

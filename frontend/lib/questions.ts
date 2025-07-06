@@ -1,6 +1,6 @@
 import z from "zod";
 import { formSchema } from "./forms";
-import { hash } from "crypto";
+import { createHash } from "crypto-browserify";
 
 export const questionSchema = z.object({
   title: z.string(),
@@ -16,6 +16,6 @@ export const questionSchema = z.object({
 })
 
 export function hashQuestion(question: z.infer<typeof questionSchema>): string {
-  const json = JSON.stringify(question);
-  return hash("sha3-512", json)
+  const json = JSON.stringify(questionSchema.parse(question));
+  return createHash("rmd160").update(json).digest("hex").slice(0, 32)
 }

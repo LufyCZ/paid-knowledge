@@ -87,6 +87,7 @@ export const useWorldPay = () => {
       console.log("Initiating payment:", paymentRequest);
 
       // Step 1: Initiate payment and get reference ID
+      console.log(paymentRequest.reference)
       const reference = paymentRequest.reference || (await initiatePayment());
 
       // Step 2: Prepare payment payload
@@ -179,7 +180,7 @@ export const useWorldPay = () => {
     to: string,
     amount: string | number,
     description: string,
-    reference?: string
+    reference: string
   ): Promise<PaymentResult> => {
     return pay({
       to,
@@ -195,7 +196,7 @@ export const useWorldPay = () => {
     to: string,
     amount: string | number,
     description: string,
-    reference?: string
+    reference: string
   ): Promise<PaymentResult> => {
     return pay({
       to,

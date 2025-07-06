@@ -11,6 +11,7 @@
   "dependencies": {
     "@mysten/sui": "^1.35.0",
     "@mysten/walrus": "^0.2.1",
+    "@noble/curves": "^1.9.2",
     "@radix-ui/react-slot": "^1.2.3",
     "@supabase/supabase-js": "^2.50.3",
     "@tanstack/react-form": "^1.12.4",
@@ -24,6 +25,7 @@
     "@worldcoin/minikit-react": "^1.9.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "crypto-browserify": "^3.12.1",
     "eruda": "^3.4.3",
     "lucide-react": "^0.525.0",
     "next": "15.3.5",

@@ -4,7 +4,7 @@ import { answerSchema } from '@/lib/answers';
 import { bountyManagerAbi, bountyManagerAddress, client } from '@/lib/viem';
 import { Address, fromHex, toHex } from 'viem';
 
-export const answerCreate = publicProcedure.input(z.object({ answer: answerSchema })).query(async ({ ctx, input }) => {
+export const answerCreate = publicProcedure.input(z.object({ answer: answerSchema })).mutation(async ({ ctx, input }) => {
   // Check if the user has already answered this question
   const answers = await client.readContract({
     address: bountyManagerAddress,
@@ -19,10 +19,11 @@ export const answerCreate = publicProcedure.input(z.object({ answer: answerSchem
 
   // Upload the answer to Walrus
   const file = new TextEncoder().encode(JSON.stringify(input.answer));
+  console.log("writin blobby")
   const blob = await ctx.walrusClient.writeBlob({
     blob: file,
     deletable: false,
-    epochs: 10,
+    epochs: 1,
     signer: ctx.walrusSigner,
   })
 

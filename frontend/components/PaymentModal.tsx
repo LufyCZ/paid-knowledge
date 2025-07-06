@@ -4,16 +4,28 @@ import { useState, useEffect } from "react";
 import { useWorldPay } from "../hooks/useWorldPay";
 import { Button } from "./ui/button";
 import { CONTRACT_ADDRESS } from "@/lib/constants";
+import { formEntrySchema } from "@/lib/forms";
+import z from "zod";
+import { hashQuestion } from "@/lib/questions";
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
+  formData: {
+    name: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+    verificationRequired: "orb" | "device" | "none";
+  } | null;
+  questions: z.infer<typeof formEntrySchema>[];
   onPaymentSuccess: (paymentData: {
     amount: number;
     token: "USDC" | "WLD";
     transactionId: string;
     maxQuestions: number;
     rewardPerQuestion: number;
+    bountyData: any;
   }) => void;
   formName: string;
 }
@@ -22,6 +34,8 @@ export function PaymentModal({
   isOpen,
   onClose,
   onPaymentSuccess,
+  formData,
+  questions,
   formName,
 }: PaymentModalProps) {
   const [numQuestions, setNumQuestions] = useState<number | null>(null);
@@ -88,17 +102,35 @@ export function PaymentModal({
   };
 
   const handlePayment = async () => {
-    if (finalQuestions <= 0 || rewardPerQuestionNum <= 0) {
+    if (finalQuestions <= 0 || !formData || rewardPerQuestionNum <= 0) {
       return;
     }
 
     try {
       const paymentFunction = rewardToken === "USDC" ? payUSDC : payWLD;
 
+      const bountyData = {
+        title: formData.name,
+        description: formData.description,
+        type: "Survey",
+        endDate: formData.endDate,
+        reward: {
+          amount: rewardPerQuestionNum,
+          currency: rewardToken,
+        },
+        verificationLevel: formData.verificationRequired,
+        form: questions,
+      } as const;
+
+      for (let i = 0; i < 5; i++) {
+        console.log(hashQuestion(bountyData));
+      }
+
       const result = await paymentFunction(
         CONTRACT_ADDRESS,
         totalAmount.toString(),
-        `Funding for bounty form: ${formName}`
+        `Funding for bounty form: ${formName}`,
+        hashQuestion(bountyData)
       );
 
       if (result.status === "success" && result.transactionId) {
@@ -108,6 +140,10 @@ export function PaymentModal({
           transactionId: result.transactionId,
           maxQuestions: finalQuestions,
           rewardPerQuestion: rewardPerQuestionNum,
+          bountyData: {
+            transactionId: result.transactionId,
+            question: bountyData,
+          },
         });
       } else {
         console.error("Payment failed:", result.errorMessage);

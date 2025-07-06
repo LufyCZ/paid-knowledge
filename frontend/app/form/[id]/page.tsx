@@ -1,15 +1,16 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
-import { getBountyForm, submitFormResponse } from "@/lib/forms";
+import { formEntrySchema } from "@/lib/forms";
 import { useWallet } from "@/hooks/useWallet";
-import { useDataRefresh } from "@/hooks/useDataRefresh";
-import { useRetry } from "@/hooks/useRetry";
-import { BountyForm, FormQuestion } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { RetryButton } from "@/components/RetryButton";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTRPC } from "@/lib/trpc";
+import { z } from "zod";
+import { answerEntrySchema } from "@/lib/answers";
+import { usePhoto } from "@/hooks/usePhoto";
 
 interface FormData {
   [key: string]: string | string[] | number;
@@ -20,178 +21,112 @@ export default function FormPage() {
   const router = useRouter();
   const formId = params.id as string;
 
-  const [formData, setFormData] = useState<
-    (BountyForm & { form_questions: FormQuestion[] }) | null
-  >(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { isConnected, address, connect } = useWallet();
 
-  // Stable fetch function for retry mechanism
-  const fetchForm = useCallback(async () => {
-    if (!formId) return;
+  const trpc = useTRPC();
+  const { data: formData, isLoading: loading } = useQuery(
+    trpc.questions.get_one.queryOptions(formId)
+  );
+  const mut = useMutation(trpc.questions.answers.create.mutationOptions());
 
-    const result = await getBountyForm(formId);
-    if (!result.success || !result.data) {
-      throw new Error("Form not found");
-    }
-
-    // Check if form is active
-    if (result.data.status !== "active") {
-      throw new Error("This form is not currently active");
-    }
-
-    // Check dates
-    const now = new Date();
-    const startDate = new Date(result.data.start_date);
-    const endDate = new Date(result.data.end_date);
-
-    if (now < startDate) {
-      throw new Error("This form is not yet available");
-    }
-
-    if (now > endDate) {
-      throw new Error("This form has expired");
-    }
-
-    // Sort questions by order
-    const sortedQuestions = [...result.data.form_questions].sort(
-      (a, b) => a.order_index - b.order_index
-    );
-
-    setFormData({
-      ...result.data,
-      form_questions: sortedQuestions,
-    });
-  }, [formId]);
-
-  // Use retry mechanism for form loading
-  const {
-    execute: loadForm,
-    isLoading: loading,
-    error,
-    retryCount,
-    canRetry,
-    retry,
-  } = useRetry(fetchForm, {
-    maxRetries: 3,
-    initialDelay: 1000,
-    shouldRetry: (error, attempt) => {
-      // Don't retry for form validation errors
-      if (
-        error?.message?.includes("not currently active") ||
-        error?.message?.includes("not yet available") ||
-        error?.message?.includes("has expired") ||
-        error?.message?.includes("Form not found")
-      ) {
-        return false;
-      }
-
-      return (
-        attempt < 3 &&
-        (error?.message?.includes("fetch") ||
-          error?.message?.includes("network") ||
-          error?.message?.includes("timeout") ||
-          error?.message?.includes("Failed to fetch"))
-      );
-    },
-  });
-
-  // Separate error state for form submission
-  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const { photo } = usePhoto();
 
   // TanStack Form
   const form = useForm({
     defaultValues: {} as FormData,
     onSubmit: async ({ value }) => {
       if (!isConnected || !address) {
-        setSubmissionError("Please connect your wallet first");
+        setError("Please connect your wallet first");
         return;
       }
 
       setSubmitting(true);
-      setSubmissionError(null);
+      setError(null);
+
+      if (!formData) {
+        setError("Form data not found");
+        setSubmitting(false);
+        return;
+      }
 
       try {
         // Prepare answers
-        const answers =
-          formData?.form_questions.map((question) => ({
-            questionId: question.id,
-            answerText:
-              typeof value[question.id] === "string"
-                ? (value[question.id] as string)
-                : undefined,
-            answerOptions: Array.isArray(value[question.id])
-              ? (value[question.id] as string[])
-              : undefined,
-          })) || [];
+        const answers: z.infer<typeof answerEntrySchema>[] = formData.form.map(
+          (question) => ({
+            formEntryId: question.id,
+            data: value[question.id] as any,
+          })
+        );
 
         // Submit form response
-        const result = await submitFormResponse({
-          formId,
-          walletAddress: address,
-          answers,
+        await mut.mutateAsync({
+          answer: {
+            questionId: formId,
+            entries: answers,
+            answererAddress: address,
+          },
         });
-
-        if (!result.success) {
-          throw new Error(result.error || "Failed to submit form");
-        }
 
         setSubmitted(true);
       } catch (err) {
-        setSubmissionError(
-          err instanceof Error ? err.message : "Failed to submit form"
-        );
+        setError(err instanceof Error ? err.message : "Failed to submit form");
       } finally {
         setSubmitting(false);
       }
     },
   });
 
-  // Use data refresh hook for navigation events
-  useDataRefresh({ refreshFn: loadForm });
+  const renderQuestionField = (question: z.infer<typeof formEntrySchema>) => {
+    // Helper function to get validation based on question type and requirements
+    const getValidators = () => {
+      return {
+        onChange: ({ value }: { value: unknown }) => {
+          // Check if the field is required and validate accordingly
+          const isRequired =
+            "required" in question ? question.required !== false : true;
+          if (isRequired) {
+            if (!value || (typeof value === "string" && value.length < 1)) {
+              return "This field is required";
+            }
+            // For arrays (multiple choice), check if empty
+            if (Array.isArray(value) && value.length === 0) {
+              return "Please select at least one option";
+            }
+          }
+          return undefined;
+        },
+      };
+    };
 
-  useEffect(() => {
-    if (formId) {
-      loadForm();
-    }
-  }, [formId, loadForm]);
-
-  const renderQuestionField = (question: FormQuestion) => {
     switch (question.type) {
-      case "Short Text":
+      case "text":
         return (
           <form.Field
             key={question.id}
             name={question.id}
-            validators={{
-              onChange: ({ value }) => {
-                if (!value || (typeof value === "string" && value.length < 1)) {
-                  return "This field is required";
-                }
-                return undefined;
-              },
-            }}
+            validators={getValidators()}
           >
             {(field) => (
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  {question.title}
-                  <span className="text-red-500">*</span>
+                  {question.label}
+                  {question.required !== false && (
+                    <span className="text-red-500">*</span>
+                  )}
                 </label>
-                {question.description && (
-                  <p className="text-sm text-gray-600">
-                    {question.description}
-                  </p>
-                )}
                 <input
                   type="text"
                   value={(field.state.value as string) || ""}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter your answer..."
+                  placeholder={question.placeholder || "Enter your answer..."}
+                  minLength={question.min}
+                  maxLength={question.max}
                 />
                 {field.state.meta.errors && (
                   <p className="text-red-500 text-sm">
@@ -203,38 +138,41 @@ export default function FormPage() {
           </form.Field>
         );
 
-      case "Long Text":
+      case "number":
         return (
           <form.Field
             key={question.id}
             name={question.id}
-            validators={{
-              onChange: ({ value }) => {
-                if (!value || (typeof value === "string" && value.length < 1)) {
-                  return "This field is required";
-                }
-                return undefined;
-              },
-            }}
+            validators={getValidators()}
           >
             {(field) => (
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  {question.title}
-                  <span className="text-red-500">*</span>
+                  {question.label}
+                  {question.required !== false && (
+                    <span className="text-red-500">*</span>
+                  )}
                 </label>
-                {question.description && (
-                  <p className="text-sm text-gray-600">
-                    {question.description}
-                  </p>
-                )}
-                <textarea
-                  value={(field.state.value as string) || ""}
-                  onChange={(e) => field.handleChange(e.target.value)}
+                <input
+                  type="number"
+                  value={(field.state.value as number) || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                      field.handleChange("");
+                    } else {
+                      const numValue = question.integer
+                        ? parseInt(value)
+                        : parseFloat(value);
+                      field.handleChange(numValue);
+                    }
+                  }}
                   onBlur={field.handleBlur}
-                  rows={4}
-                  className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                  placeholder="Enter your answer..."
+                  className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder={question.placeholder || "Enter a number..."}
+                  min={question.min}
+                  max={question.max}
+                  step={question.integer ? 1 : "any"}
                 />
                 {field.state.meta.errors && (
                   <p className="text-red-500 text-sm">
@@ -246,155 +184,23 @@ export default function FormPage() {
           </form.Field>
         );
 
-      case "Yes/No":
+      case "multiple_choice":
         return (
           <form.Field
             key={question.id}
             name={question.id}
-            validators={{
-              onChange: ({ value }) => {
-                if (!value) return "Please select an option";
-                return undefined;
-              },
-            }}
+            validators={getValidators()}
           >
             {(field) => (
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  {question.title}
-                  <span className="text-red-500">*</span>
+                  {question.label}
+                  {question.required !== false && (
+                    <span className="text-red-500">*</span>
+                  )}
                 </label>
-                {question.description && (
-                  <p className="text-sm text-gray-600">
-                    {question.description}
-                  </p>
-                )}
                 <div className="space-y-3">
-                  {["Yes", "No"].map((option) => (
-                    <label
-                      key={option}
-                      className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="radio"
-                        name={question.id}
-                        value={option}
-                        checked={field.state.value === option}
-                        onChange={() => field.handleChange(option)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-base text-gray-700">{option}</span>
-                    </label>
-                  ))}
-                </div>
-                {field.state.meta.errors && (
-                  <p className="text-red-500 text-sm">
-                    {field.state.meta.errors[0]}
-                  </p>
-                )}
-              </div>
-            )}
-          </form.Field>
-        );
-
-      case "Single Choice":
-      case "Dropdown":
-        return (
-          <form.Field
-            key={question.id}
-            name={question.id}
-            validators={{
-              onChange: ({ value }) => {
-                if (!value) return "Please select an option";
-                return undefined;
-              },
-            }}
-          >
-            {(field) => (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  {question.title}
-                  <span className="text-red-500">*</span>
-                </label>
-                {question.description && (
-                  <p className="text-sm text-gray-600">
-                    {question.description}
-                  </p>
-                )}
-                {question.type === "Dropdown" ? (
-                  <select
-                    value={(field.state.value as string) || ""}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select an option...</option>
-                    {question.options?.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="space-y-3">
-                    {question.options?.map((option, index) => (
-                      <label
-                        key={index}
-                        className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                      >
-                        <input
-                          type="radio"
-                          name={question.id}
-                          value={option}
-                          checked={field.state.value === option}
-                          onChange={() => field.handleChange(option)}
-                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-base text-gray-700">
-                          {option}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-                {field.state.meta.errors && (
-                  <p className="text-red-500 text-sm">
-                    {field.state.meta.errors[0]}
-                  </p>
-                )}
-              </div>
-            )}
-          </form.Field>
-        );
-
-      case "Multiple Choice":
-      case "Checkbox":
-        return (
-          <form.Field
-            key={question.id}
-            name={question.id}
-            validators={{
-              onChange: ({ value }) => {
-                if (!value || (Array.isArray(value) && value.length === 0)) {
-                  return "Please select at least one option";
-                }
-                return undefined;
-              },
-            }}
-          >
-            {(field) => (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  {question.title}
-                  <span className="text-red-500">*</span>
-                </label>
-                {question.description && (
-                  <p className="text-sm text-gray-600">
-                    {question.description}
-                  </p>
-                )}
-                <div className="space-y-3">
-                  {question.options?.map((option, index) => (
+                  {question.options.map((option: string, index: number) => (
                     <label
                       key={index}
                       className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
@@ -434,52 +240,33 @@ export default function FormPage() {
           </form.Field>
         );
 
-      case "Picture Choice":
+      case "checkbox":
         return (
           <form.Field
             key={question.id}
             name={question.id}
             validators={{
-              onChange: ({ value }) => {
-                if (!value) return "Please select an option";
+              onChange: () => {
+                // Checkbox validation is typically just boolean
                 return undefined;
               },
             }}
           >
             {(field) => (
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  {question.title}
-                  <span className="text-red-500">*</span>
+                <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(field.state.value)}
+                    onChange={(e) =>
+                      field.handleChange(e.target.checked ? "true" : "")
+                    }
+                    className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded"
+                  />
+                  <span className="text-base text-gray-700">
+                    {question.label}
+                  </span>
                 </label>
-                {question.description && (
-                  <p className="text-sm text-gray-600">
-                    {question.description}
-                  </p>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  {question.options?.map((option, index) => (
-                    <label
-                      key={index}
-                      className={`relative cursor-pointer border-2 rounded-lg p-3 text-center transition-all ${
-                        field.state.value === option
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={question.id}
-                        value={option}
-                        checked={field.state.value === option}
-                        onChange={() => field.handleChange(option)}
-                        className="sr-only"
-                      />
-                      <div className="text-2xl mb-2">🖼️</div>
-                      <span className="text-sm text-gray-700">{option}</span>
-                    </label>
-                  ))}
-                </div>
                 {field.state.meta.errors && (
                   <p className="text-red-500 text-sm">
                     {field.state.meta.errors[0]}
@@ -490,30 +277,42 @@ export default function FormPage() {
           </form.Field>
         );
 
-      case "Picture Answer":
+      case "image":
         return (
           <div
             key={question.id}
             className="p-4 bg-yellow-50 border border-yellow-200 rounded"
           >
-            <p className="text-yellow-800 mb-2 font-medium">{question.title}</p>
+            <p className="text-yellow-800 mb-2 font-medium">{question.label}</p>
             <p className="text-yellow-700 text-sm">
-              Picture upload functionality not yet implemented. This question
-              type will be supported in a future update.
+              {photo?.text()}
+              {question.min &&
+                question.max &&
+                ` Required: ${question.min}-${question.max} images.`}
             </p>
           </div>
         );
 
-      case "Video Answer":
+      case "photo":
         return (
           <div
             key={question.id}
-            className="p-4 bg-yellow-50 border border-yellow-200 rounded"
+            className="p-4 bg-blue-50 border border-blue-200 rounded"
           >
-            <p className="text-yellow-800 mb-2 font-medium">{question.title}</p>
-            <p className="text-yellow-700 text-sm">
-              Video upload functionality not yet implemented. This question type
-              will be supported in a future update.
+            <p className="text-blue-800 mb-2 font-medium">{question.label}</p>
+            {question.requirements && (
+              <p className="text-blue-700 text-sm mb-2">
+                Requirements: {question.requirements}
+              </p>
+            )}
+            {question.location && (
+              <p className="text-blue-700 text-sm mb-2">
+                Location: {question.location}
+              </p>
+            )}
+            <p className="text-blue-700 text-sm">
+              Photo capture functionality not yet implemented. This question
+              type will be supported in a future update.
             </p>
           </div>
         );
@@ -521,11 +320,11 @@ export default function FormPage() {
       default:
         return (
           <div
-            key={question.id}
+            key={(question as { id: string }).id}
             className="p-4 bg-yellow-50 border border-yellow-200 rounded"
           >
             <p className="text-yellow-800">
-              Unsupported question type: {question.type}
+              Unsupported question type: {(question as { type: string }).type}
             </p>
           </div>
         );
@@ -550,22 +349,13 @@ export default function FormPage() {
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">Error</h1>
           <p className="text-gray-600 mb-4">{error}</p>
-          <div className="space-y-2">
-            {canRetry && (
-              <RetryButton
-                onRetry={retry}
-                retryCount={retryCount}
-                className="w-full"
-              />
-            )}
-            <Button
-              onClick={() => router.push("/")}
-              variant="outline"
-              className="w-full"
-            >
-              Go Home
-            </Button>
-          </div>
+          <Button
+            onClick={() => router.push("/")}
+            variant="outline"
+            className="w-full"
+          >
+            Go Home
+          </Button>
         </div>
       </div>
     );
@@ -583,8 +373,8 @@ export default function FormPage() {
             <p className="mb-2">Thank you for your submission!</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
               <p className="text-sm text-blue-800">
-                <strong>Expected Reward:</strong>{" "}
-                {formData?.reward_per_question} {formData?.reward_token}
+                <strong>Expected Reward:</strong> {formData?.reward?.amount}{" "}
+                {formData?.reward?.currency}
               </p>
               <p className="text-xs text-blue-600 mt-1">
                 Rewards will be distributed by the form creator.
@@ -613,7 +403,7 @@ export default function FormPage() {
         {/* Form Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-            {formData.name}
+            {formData.title}
           </h1>
           {formData.description && (
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
@@ -624,10 +414,11 @@ export default function FormPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-gray-500 space-y-2 sm:space-y-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0">
               <span className="flex items-center">
-                💰 {formData.reward_per_question} {formData.reward_token}
+                💰 {formData.reward?.amount || 0}{" "}
+                {formData?.reward?.currency || "WLD"}
               </span>
               <span className="flex items-center">
-                📊 {formData.form_questions.length} questions
+                📊 {formData.form.length} questions
               </span>
             </div>
           </div>
@@ -662,7 +453,7 @@ export default function FormPage() {
           }}
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-6"
         >
-          {formData.form_questions.map(renderQuestionField)}
+          {formData.form.map(renderQuestionField)}
 
           {/* Submit Button */}
           <div className="pt-6 border-t border-gray-200">
@@ -681,9 +472,9 @@ export default function FormPage() {
               )}
             </Button>
 
-            {submissionError && (
+            {error && (
               <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">{submissionError}</p>
+                <p className="text-red-700 text-sm">{error}</p>
               </div>
             )}
           </div>

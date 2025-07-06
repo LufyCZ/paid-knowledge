@@ -10,6 +10,7 @@ import { usePhoto } from "@/hooks/usePhoto";
 import z from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc";
+import { questionSchema } from "@/lib/questions";
 
 const QUESTION_TYPES = [
   {
@@ -1623,6 +1624,10 @@ function PhotoPaymentStepPage({
     transactionId: string;
     maxQuestions: number;
     rewardPerQuestion: number;
+    bountyData: {
+      transactionId: string;
+      question: z.infer<typeof questionSchema>;
+    };
   }) => {
     setShowPaymentModal(false);
     setIsLoading(true);
@@ -1635,29 +1640,9 @@ function PhotoPaymentStepPage({
 
     try {
       // Create photo task form with special structure
-      const result = await createBountyFormMutation.mutateAsync({
-        transactionId: payment.transactionId,
-        question: {
-          title: formData.name,
-          description: formData.description,
-          type: "Survey",
-          endDate: formData.endDate,
-          reward: {
-            amount: payment.rewardPerQuestion,
-            currency: payment.token,
-          },
-          verificationLevel: formData.verificationRequired,
-          form: [
-            {
-              id: crypto.randomUUID(),
-              label: photoTask.title,
-              requirements: photoTask.requirements,
-              location: photoTask.location || undefined,
-              type: "photo",
-            },
-          ],
-        },
-      });
+      const result = await createBountyFormMutation.mutateAsync(
+        payment.bountyData
+      );
 
       // Navigate to success page
       router.push(`/form-success?formId=${result.blobId}&type=photo`);
@@ -1736,6 +1721,16 @@ function PhotoPaymentStepPage({
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
+          formData={formData}
+          questions={[
+            {
+              id: crypto.randomUUID(),
+              label: photoTask.title,
+              requirements: photoTask.requirements,
+              location: photoTask.location || undefined,
+              type: "photo",
+            },
+          ]}
           onPaymentSuccess={handlePaymentSuccess}
           formName={formData.name}
         />
@@ -1844,6 +1839,10 @@ function PaymentStepPage({
     transactionId: string;
     maxQuestions: number;
     rewardPerQuestion: number;
+    bountyData: {
+      transactionId: string;
+      question: z.infer<typeof questionSchema>;
+    };
   }) => {
     setShowPaymentModal(false);
     setIsLoading(true);
@@ -1856,21 +1855,9 @@ function PaymentStepPage({
 
     try {
       // Convert questions to the format expected by createBountyForm
-      const result = await createBountyFormMutation.mutateAsync({
-        transactionId: payment.transactionId,
-        question: {
-          title: formData.name,
-          description: formData.description,
-          type: "Survey",
-          endDate: formData.endDate,
-          reward: {
-            amount: payment.rewardPerQuestion,
-            currency: payment.token,
-          },
-          verificationLevel: formData.verificationRequired,
-          form: questions,
-        },
-      });
+      const result = await createBountyFormMutation.mutateAsync(
+        payment.bountyData
+      );
 
       // Navigate to success page
       router.push(`/form-success?formId=${result.blobId}&type=survey`);
@@ -1951,6 +1938,8 @@ function PaymentStepPage({
           onClose={() => setShowPaymentModal(false)}
           onPaymentSuccess={handlePaymentSuccess}
           formName={formData.name}
+          formData={formData}
+          questions={questions}
         />
       )}
 

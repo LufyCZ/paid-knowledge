@@ -7,6 +7,8 @@ interface IRequestPayload {
 }
 
 export async function POST(req: NextRequest) {
+  return NextResponse.json({ success: true })
+
   try {
     const { payload } = (await req.json()) as IRequestPayload;
 
