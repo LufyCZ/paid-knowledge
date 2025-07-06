@@ -155,18 +155,18 @@ export default function FormBuilder() {
               </div>
             </div>
 
-            <div
-              onClick={() => setSelectedType("photo")}
-              className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300"
-            >
+            <div className="bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-200 opacity-60 cursor-not-allowed relative">
               <div className="flex items-center space-x-4">
                 <div className="text-4xl">📸</div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Photo</h3>
-                  <p className="text-gray-600 text-sm">
+                  <h3 className="text-lg font-semibold text-gray-500">Photo</h3>
+                  <p className="text-gray-400 text-sm">
                     Create photo collection tasks and challenges
                   </p>
                 </div>
+              </div>
+              <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
+                Coming Soon
               </div>
             </div>
           </div>
@@ -1277,6 +1277,11 @@ function PhotoPaymentStepPage({
         userEligibility: formData.userEligibility,
         questions: [photoQuestionData],
         creatorWalletAddress: address!,
+        paymentData: {
+          amount: payment.amount,
+          transactionId: payment.transactionId,
+          maxQuestions: payment.maxQuestions,
+        },
       };
 
       const result = await createBountyForm(createFormData);
@@ -1501,6 +1506,11 @@ function PaymentStepPage({
         userEligibility: formData.userEligibility,
         questions: questionsData,
         creatorWalletAddress: address!,
+        paymentData: {
+          amount: payment.amount,
+          transactionId: payment.transactionId,
+          maxQuestions: payment.maxQuestions,
+        },
       };
 
       const result = await createBountyForm(createFormData);
