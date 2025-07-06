@@ -556,3 +556,83 @@ export async function bulkApproveResponses(
     };
   }
 }
+
+// Get remaining balance for quest payouts
+export async function getQuestRemainingBalance(questId: string) {
+  try {
+    // 1. Get total amount deposited for this quest
+    const { data: payments, error: paymentsError } = await supabase
+      .from("payment_references")
+      .select("metadata")
+      .eq("form_id", questId)
+      .eq("status", "confirmed");
+
+    if (paymentsError) {
+      throw new Error(paymentsError.message);
+    }
+
+    let totalDeposited = 0;
+    let rewardToken = "USDC";
+
+    // Calculate total deposited amount
+    if (payments && payments.length > 0) {
+      totalDeposited = payments.reduce((sum, payment) => {
+        if (payment.metadata && payment.metadata.amount) {
+          return sum + parseFloat(payment.metadata.amount);
+        }
+        return sum;
+      }, 0);
+    }
+
+    // 2. Get quest details for reward info
+    const { data: quest, error: questError } = await supabase
+      .from("bounty_forms")
+      .select("reward_per_question, reward_token")
+      .eq("id", questId)
+      .single();
+
+    if (questError) {
+      throw new Error(questError.message);
+    }
+
+    if (quest) {
+      rewardToken = quest.reward_token;
+    }
+
+    // 3. Get total amount already paid out (approved responses)
+    const { data: responses, error: responsesError } = await supabase
+      .from("form_responses")
+      .select("total_reward")
+      .eq("form_id", questId)
+      .in("status", ["approved", "paid"]);
+
+    if (responsesError) {
+      throw new Error(responsesError.message);
+    }
+
+    let totalPaidOut = 0;
+    if (responses && responses.length > 0) {
+      totalPaidOut = responses.reduce((sum, response) => {
+        return sum + (response.total_reward || 0);
+      }, 0);
+    }
+
+    const remainingBalance = totalDeposited - totalPaidOut;
+
+    return {
+      success: true,
+      data: {
+        totalDeposited,
+        totalPaidOut,
+        remainingBalance,
+        rewardToken,
+      },
+    };
+  } catch (error) {
+    console.error("Error getting quest balance:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}

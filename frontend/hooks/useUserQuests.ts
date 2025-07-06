@@ -4,6 +4,7 @@ import {
   getFormResponses,
   updateResponseStatus,
   bulkApproveResponses,
+  getQuestRemainingBalance,
 } from "@/lib/forms";
 import { BountyForm } from "@/lib/supabase";
 import { useRetry } from "./useRetry";
@@ -20,6 +21,12 @@ export interface UserQuest extends BountyForm {
     pending: number;
     approved: number;
     rejected: number;
+  };
+  balanceInfo?: {
+    totalDeposited: number;
+    totalPaidOut: number;
+    remainingBalance: number;
+    rewardToken: string;
   };
 }
 
@@ -54,7 +61,7 @@ export function useUserQuests(walletAddress: string | null) {
     const result = await getUserCreatedForms(walletAddress);
 
     if (result.success && result.data) {
-      // For each quest, get response statistics
+      // For each quest, get response statistics and balance info
       const questsWithStats = await Promise.all(
         result.data.map(async (quest) => {
           const responsesResult = await getFormResponses(quest.id);
@@ -79,9 +86,18 @@ export function useUserQuests(walletAddress: string | null) {
             ).length;
           }
 
+          // Get balance information
+          const balanceResult = await getQuestRemainingBalance(quest.id);
+          let balanceInfo = undefined;
+
+          if (balanceResult.success && balanceResult.data) {
+            balanceInfo = balanceResult.data;
+          }
+
           return {
             ...quest,
             responseStats,
+            balanceInfo,
           };
         })
       );

@@ -120,6 +120,20 @@ export function QuestManagement({ walletAddress }: QuestManagementProps) {
                 <span>
                   💰 {quest.reward_per_question} {quest.reward_token}
                 </span>
+                {quest.balanceInfo &&
+                  quest.balanceInfo.remainingBalance > 0 && (
+                    <span className="text-green-600 font-medium">
+                      🔋 {quest.balanceInfo.remainingBalance.toFixed(2)}{" "}
+                      {quest.balanceInfo.rewardToken} remaining
+                    </span>
+                  )}
+                {quest.balanceInfo &&
+                  quest.balanceInfo.remainingBalance <= 0 &&
+                  quest.balanceInfo.totalDeposited > 0 && (
+                    <span className="text-red-600 font-medium">
+                      ⚠️ No funds remaining
+                    </span>
+                  )}
                 <span className="hidden sm:inline">
                   📅 Ends {new Date(quest.end_date).toLocaleDateString()}
                 </span>
@@ -159,6 +173,46 @@ export function QuestManagement({ walletAddress }: QuestManagementProps) {
                     {quest.responseStats.rejected}
                   </div>
                   <div className="text-xs text-red-600">Rejected</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Balance Information */}
+          {quest.balanceInfo && quest.balanceInfo.totalDeposited > 0 && (
+            <div className="mb-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">
+                  💰 Payment Balance
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <span className="text-blue-700">Deposited:</span>
+                    <span className="ml-1 font-semibold text-blue-900">
+                      {quest.balanceInfo.totalDeposited.toFixed(2)}{" "}
+                      {quest.balanceInfo.rewardToken}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">Paid out:</span>
+                    <span className="ml-1 font-semibold text-blue-900">
+                      {quest.balanceInfo.totalPaidOut.toFixed(2)}{" "}
+                      {quest.balanceInfo.rewardToken}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">Remaining:</span>
+                    <span
+                      className={`ml-1 font-semibold ${
+                        quest.balanceInfo.remainingBalance > 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {quest.balanceInfo.remainingBalance.toFixed(2)}{" "}
+                      {quest.balanceInfo.rewardToken}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
