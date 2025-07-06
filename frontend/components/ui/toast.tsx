@@ -122,10 +122,10 @@ const ToastComponent: React.FC<{
     }
   };
 
-  const handleRemove = () => {
+  const handleRemove = useCallback(() => {
     setIsLeaving(true);
     setTimeout(() => onRemove(toast.id), 200); // Wait for exit animation
-  };
+  }, [toast.id, onRemove]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -133,15 +133,14 @@ const ToastComponent: React.FC<{
     }, toast.duration || 5000);
 
     return () => clearTimeout(timer);
-  }, [toast.id, toast.duration]);
+  }, [toast.id, toast.duration, handleRemove]);
 
   return (
     <div
-      className={`w-full transition-all duration-300 ease-in-out ${
-        isLeaving
-          ? "opacity-0 transform -translate-y-2"
-          : "opacity-100 transform translate-y-0"
-      }`}
+      className={`w-full transition-all duration-300 ease-in-out ${isLeaving
+        ? "opacity-0 transform -translate-y-2"
+        : "opacity-100 transform translate-y-0"
+        }`}
       style={{
         animation: isLeaving
           ? "slideOutToTop 0.3s ease-in-out"

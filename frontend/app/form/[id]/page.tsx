@@ -119,7 +119,7 @@ export default function FormPage() {
   // WorldID verification hook - must be defined before use in handleFormSubmission
   const worldIdVerification = useWorldIdVerification({
     verificationType: formData?.user_eligibility === "Orb" ? "Orb" : "Device",
-    formId: formId, // Pass formId to make verification unique per form
+    // formId: formId, // Pass formId to make verification unique per form
     onSuccess: () => {
       console.log(
         "✅ WorldID verification successful, proceeding with form submission"
@@ -579,11 +579,10 @@ export default function FormPage() {
                   {question.options?.map((option, index) => (
                     <label
                       key={index}
-                      className={`relative cursor-pointer border-2 rounded-lg p-3 text-center transition-all ${
-                        field.state.value === option
+                      className={`relative cursor-pointer border-2 rounded-lg p-3 text-center transition-all ${field.state.value === option
                           ? "border-blue-500 bg-blue-50"
                           : "border-gray-200 hover:border-gray-300"
-                      }`}
+                        }`}
                     >
                       <input
                         type="radio"
@@ -793,8 +792,8 @@ export default function FormPage() {
                 {formData.user_eligibility === "All"
                   ? "No verification required"
                   : formData.user_eligibility === "Orb"
-                  ? "Orb verification required"
-                  : "Device verification required"}
+                    ? "Orb verification required"
+                    : "Device verification required"}
               </span>
             </div>
           </div>

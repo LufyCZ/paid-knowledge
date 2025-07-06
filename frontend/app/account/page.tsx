@@ -164,14 +164,14 @@ export default function AccountPage() {
     }
   }, [isClient, isConnected, installed]);
 
-  console.log("Debug info:");
-  console.log("- Username from state:", username);
-  console.log("- worldchainUsername from wallet:", worldchainUsername);
-  console.log("- MiniKit installed:", installed);
-  console.log("- MiniKit user:", installed ? MiniKit.user : "Not installed");
-  console.log("- Is connected:", isConnected);
-  console.log("- Address:", address);
-  console.log("- Is client:", isClient);
+  // console.log("Debug info:");
+  // console.log("- Username from state:", username);
+  // console.log("- worldchainUsername from wallet:", worldchainUsername);
+  // console.log("- MiniKit installed:", installed);
+  // console.log("- MiniKit user:", installed ? MiniKit.user : "Not installed");
+  // console.log("- Is connected:", isConnected);
+  // console.log("- Address:", address);
+  // console.log("- Is client:", isClient);
 
   // Update username in profile if it has changed
   useEffect(() => {

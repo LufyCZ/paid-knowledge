@@ -1,10 +1,18 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 
 export default function FormSuccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-center"><div className="text-2xl">⏳</div><p className="text-gray-600 mt-2">Loading...</p></div></div>}>
+      <FormSuccessContent />
+    </Suspense>
+  );
+}
+
+function FormSuccessContent() {
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState<{
     name: string;
