@@ -273,7 +273,25 @@ export interface FormSubmissionData {
 
 export async function submitFormResponse(submissionData: FormSubmissionData) {
   try {
-    // 1. Get form details to calculate reward
+    // 1. Check if user has already submitted to this form
+    const { data: existingSubmission, error: checkError } = await supabase
+      .from("form_responses")
+      .select("id")
+      .eq("form_id", submissionData.formId)
+      .eq("wallet_address", submissionData.walletAddress)
+      .single();
+
+    if (checkError && checkError.code !== "PGRST116") {
+      // PGRST116 is "not found" error, which is what we want
+      console.error("Error checking existing submission:", checkError);
+      throw new Error("Failed to check existing submissions");
+    }
+
+    if (existingSubmission) {
+      throw new Error("You have already submitted a response to this quest");
+    }
+
+    // 2. Get form details to calculate reward
     const formResult = await getBountyForm(submissionData.formId);
     if (!formResult.success || !formResult.data) {
       throw new Error("Form not found");
@@ -282,7 +300,7 @@ export async function submitFormResponse(submissionData: FormSubmissionData) {
     const form = formResult.data;
     const totalReward = form.reward_per_question; // Use the stored value directly as total reward
 
-    // 2. Create form response
+    // 3. Create form response
     const { data: response, error: responseError } = await supabase
       .from("form_responses")
       .insert({
@@ -300,7 +318,7 @@ export async function submitFormResponse(submissionData: FormSubmissionData) {
       throw new Error("Failed to create form response");
     }
 
-    // 3. Insert answers
+    // 4. Insert answers
     const answersToInsert = submissionData.answers.map((answer) => ({
       response_id: response.id,
       question_id: answer.questionId,
@@ -630,6 +648,88 @@ export async function getQuestRemainingBalance(questId: string) {
     };
   } catch (error) {
     console.error("Error getting quest balance:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+// Get user's quest submission history
+export async function getUserSubmissionHistory(
+  walletAddress: string,
+  limit = 20,
+  offset = 0
+) {
+  try {
+    const { data, error } = await supabase
+      .from("form_responses")
+      .select(
+        `
+        id,
+        total_reward,
+        reward_token,
+        status,
+        submitted_at,
+        bounty_forms (
+          id,
+          name,
+          description,
+          reward_per_question,
+          reward_token
+        )
+      `
+      )
+      .eq("wallet_address", walletAddress)
+      .order("submitted_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error("Error fetching user submission history:", error);
+      throw new Error("Failed to fetch submission history");
+    }
+
+    return {
+      data: data || [],
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in getUserSubmissionHistory:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+// Check if user has already submitted to a specific form
+export async function hasUserSubmittedToForm(
+  walletAddress: string,
+  formId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from("form_responses")
+      .select("id")
+      .eq("form_id", formId)
+      .eq("wallet_address", walletAddress)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      // PGRST116 is "not found" error
+      console.error("Error checking submission status:", error);
+      throw new Error("Failed to check submission status");
+    }
+
+    return {
+      data: {
+        hasSubmitted: !!data,
+        submissionId: data?.id || null,
+      },
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in hasUserSubmittedToForm:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",

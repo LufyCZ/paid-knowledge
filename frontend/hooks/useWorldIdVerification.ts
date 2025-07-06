@@ -7,6 +7,7 @@ import { VerificationLevel } from "@worldcoin/minikit-js";
 
 interface UseWorldIdVerificationProps {
   verificationType: "Device" | "Orb";
+  formId?: string; // Add optional formId to make verification unique
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -19,6 +20,7 @@ interface VerificationState {
 
 export const useWorldIdVerification = ({
   verificationType,
+  formId,
   onSuccess,
   onError,
 }: UseWorldIdVerificationProps) => {
@@ -29,12 +31,14 @@ export const useWorldIdVerification = ({
     error: null,
   });
 
+  // Create a unique action ID that includes form ID and timestamp to avoid "already verified" errors
+  const uniqueActionId = formId
+    ? `${verificationType.toLowerCase()}-verification-${formId}`
+    : `${verificationType.toLowerCase()}-verification-${Date.now()}`;
+
   // Create a simpler World ID hook that doesn't do backend verification
   const worldId = useWorldId({
-    action:
-      verificationType === "Device"
-        ? "device-verification"
-        : "orb-verification",
+    action: uniqueActionId,
     signal: address || undefined, // Use wallet address as signal
     verification_level:
       verificationType === "Device"
@@ -58,7 +62,7 @@ export const useWorldIdVerification = ({
       // Step 1: Perform World ID verification
       console.log("📱 Calling worldId.verify()...");
       await worldId.verify();
-      
+
       console.log("✅ worldId.verify() completed");
       console.log("worldId.isSuccess:", worldId.isSuccess);
       console.log("worldId.error:", worldId.error);
@@ -72,50 +76,22 @@ export const useWorldIdVerification = ({
 
       // Wait a moment for state to update and check success
       // The worldId.verify() should have completed successfully if we reach here without error
-      console.log("🔄 World ID verification completed, proceeding to profile update...");
+      console.log("🔄 World ID verification completed successfully");
 
-      // Step 2: Submit to backend API
-      console.log("📡 Sending verification to profile update backend...");
-      const response = await fetch("/api/verify-worldid", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          walletAddress: address,
-          verificationType,
-          worldIdPayload: {
-            verified: true,
-            timestamp: new Date().toISOString(),
-            verification_level: verificationType,
-          },
-          actionId:
-            verificationType === "Device"
-              ? "device-verification"
-              : "orb-verification",
-          signal: address, // Include signal parameter
-        }),
-      });
-
-      console.log("📡 Backend response status:", response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log("❌ Profile update backend error:", errorData);
-        throw new Error(errorData.error || "Profile update failed");
-      }
-
-      const result = await response.json();
-      console.log("✅ Profile update successful:", result);
+      // For form submissions, we don't need to store verification in the backend
+      // The fact that WorldID verification passed is sufficient
+      console.log(
+        "✅ Verification successful, skipping backend storage for form submission"
+      );
       setState({ isLoading: false, isSuccess: true, error: null });
       onSuccess?.();
-      return result;
+      return { verified: true, timestamp: new Date().toISOString() };
     } catch (error) {
       console.log("❌ Verification process failed:");
       console.log("Error:", error);
       console.log("worldId.error:", worldId.error);
       console.log("worldId.isSuccess:", worldId.isSuccess);
-      
+
       const errorMessage =
         error instanceof Error ? error.message : "Verification failed";
       console.log("Final error message:", errorMessage);

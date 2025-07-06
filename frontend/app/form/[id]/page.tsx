@@ -3,10 +3,15 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useForm } from "@tanstack/react-form";
-import { getBountyForm, submitFormResponse } from "@/lib/forms";
+import {
+  getBountyForm,
+  submitFormResponse,
+  hasUserSubmittedToForm,
+} from "@/lib/forms";
 import { useWallet } from "@/hooks/useWallet";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { useRetry } from "@/hooks/useRetry";
+import { useWorldIdVerification } from "@/hooks/useWorldIdVerification";
 import { BountyForm, FormQuestion } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { RetryButton } from "@/components/RetryButton";
@@ -25,6 +30,8 @@ export default function FormPage() {
   >(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const { isConnected, address, connect } = useWallet();
 
@@ -55,6 +62,14 @@ export default function FormPage() {
       throw new Error("This form has expired");
     }
 
+    // Check if user has already submitted (if connected)
+    if (address) {
+      const submissionCheck = await hasUserSubmittedToForm(address, formId);
+      if (submissionCheck.success && submissionCheck.data?.hasSubmitted) {
+        setAlreadySubmitted(true);
+      }
+    }
+
     // Sort questions by order
     const sortedQuestions = [...result.data.form_questions].sort(
       (a, b) => a.order_index - b.order_index
@@ -64,7 +79,7 @@ export default function FormPage() {
       ...result.data,
       form_questions: sortedQuestions,
     });
-  }, [formId]);
+  }, [formId, address]);
 
   // Use retry mechanism for form loading
   const {
@@ -101,51 +116,141 @@ export default function FormPage() {
   // Separate error state for form submission
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
-  // TanStack Form
-  const form = useForm({
-    defaultValues: {} as FormData,
-    onSubmit: async ({ value }) => {
-      if (!isConnected || !address) {
-        setSubmissionError("Please connect your wallet first");
+  // WorldID verification hook - must be defined before use in handleFormSubmission
+  const worldIdVerification = useWorldIdVerification({
+    verificationType: formData?.user_eligibility === "Orb" ? "Orb" : "Device",
+    formId: formId, // Pass formId to make verification unique per form
+    onSuccess: () => {
+      console.log(
+        "✅ WorldID verification successful, proceeding with form submission"
+      );
+      setVerifying(false);
+      // Get stored form values and submit
+      const storedValues = (window as any).__pendingFormValues;
+      if (storedValues) {
+        submitFormWithoutVerification(storedValues);
+        delete (window as any).__pendingFormValues;
+      }
+    },
+    onError: (error) => {
+      console.log("❌ WorldID verification failed:", error);
+      setVerifying(false);
+      // Filter out the "Already verified" error and treat it as success
+      if (error.toLowerCase().includes("already verified")) {
+        console.log(
+          "🔄 User already verified, proceeding with form submission"
+        );
+        const storedValues = (window as any).__pendingFormValues;
+        if (storedValues) {
+          submitFormWithoutVerification(storedValues);
+          delete (window as any).__pendingFormValues;
+        }
+      } else {
+        setSubmissionError(`WorldID verification failed: ${error}`);
+        delete (window as any).__pendingFormValues;
+      }
+    },
+  });
+
+  // Function to submit form without verification (after verification is complete)
+  const submitFormWithoutVerification = async (formValues: FormData) => {
+    if (!isConnected || !address) {
+      setSubmissionError("Please connect your wallet first");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmissionError(null);
+
+    try {
+      // Prepare answers
+      const answers =
+        formData?.form_questions.map((question) => ({
+          questionId: question.id,
+          answerText:
+            typeof formValues[question.id] === "string"
+              ? (formValues[question.id] as string)
+              : undefined,
+          answerOptions: Array.isArray(formValues[question.id])
+            ? (formValues[question.id] as string[])
+            : undefined,
+        })) || [];
+
+      // Submit form response
+      const result = await submitFormResponse({
+        formId,
+        walletAddress: address,
+        answers,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to submit form");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setSubmissionError(
+        err instanceof Error ? err.message : "Failed to submit form"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Main form submission handler
+  const handleFormSubmission = async (formValues: FormData) => {
+    if (!isConnected || !address) {
+      setSubmissionError("Please connect your wallet first");
+      return;
+    }
+
+    // Check if WorldID verification is required
+    const requiresVerification =
+      formData?.user_eligibility && formData.user_eligibility !== "All";
+
+    if (requiresVerification) {
+      console.log(
+        "🔐 WorldID verification required for user eligibility:",
+        formData.user_eligibility
+      );
+
+      // Check if WorldID is available
+      if (!worldIdVerification.isReady) {
+        setSubmissionError(
+          "WorldID verification is not available. Please make sure you're using a compatible wallet."
+        );
         return;
       }
 
-      setSubmitting(true);
+      setVerifying(true);
       setSubmissionError(null);
 
+      // Store form values for later submission
+      (window as any).__pendingFormValues = formValues;
+
+      // Start verification process
       try {
-        // Prepare answers
-        const answers =
-          formData?.form_questions.map((question) => ({
-            questionId: question.id,
-            answerText:
-              typeof value[question.id] === "string"
-                ? (value[question.id] as string)
-                : undefined,
-            answerOptions: Array.isArray(value[question.id])
-              ? (value[question.id] as string[])
-              : undefined,
-          })) || [];
-
-        // Submit form response
-        const result = await submitFormResponse({
-          formId,
-          walletAddress: address,
-          answers,
-        });
-
-        if (!result.success) {
-          throw new Error(result.error || "Failed to submit form");
-        }
-
-        setSubmitted(true);
-      } catch (err) {
+        await worldIdVerification.verify();
+      } catch (error) {
+        console.log("❌ Verification initiation failed:", error);
+        setVerifying(false);
         setSubmissionError(
-          err instanceof Error ? err.message : "Failed to submit form"
+          "Failed to start verification process. Please try again."
         );
-      } finally {
-        setSubmitting(false);
+        delete (window as any).__pendingFormValues;
       }
+    } else {
+      console.log("📝 No verification required, submitting directly");
+      // No verification required, submit directly
+      await submitFormWithoutVerification(formValues);
+    }
+  };
+
+  // TanStack Form with updated submission handler
+  const form = useForm({
+    defaultValues: {} as FormData,
+    onSubmit: async ({ value }) => {
+      await handleFormSubmission(value);
     },
   });
 
@@ -157,6 +262,19 @@ export default function FormPage() {
       loadForm();
     }
   }, [formId, loadForm]);
+
+  // Recheck submission status when wallet connects
+  useEffect(() => {
+    if (isConnected && address && formData && !alreadySubmitted) {
+      const checkSubmission = async () => {
+        const submissionCheck = await hasUserSubmittedToForm(address, formId);
+        if (submissionCheck.success && submissionCheck.data?.hasSubmitted) {
+          setAlreadySubmitted(true);
+        }
+      };
+      checkSubmission();
+    }
+  }, [isConnected, address, formData, alreadySubmitted, formId]);
 
   const renderQuestionField = (question: FormQuestion) => {
     switch (question.type) {
@@ -534,7 +652,7 @@ export default function FormPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 pb-20">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Loading form...</p>
@@ -545,7 +663,7 @@ export default function FormPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 pb-20">
         <div className="text-center p-6 bg-white rounded-xl shadow-lg max-w-md w-full">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">Error</h1>
@@ -573,7 +691,7 @@ export default function FormPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 pb-20">
         <div className="text-center p-6 bg-white rounded-xl shadow-lg max-w-md w-full">
           <div className="text-green-500 text-4xl mb-4">✅</div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">
@@ -603,12 +721,53 @@ export default function FormPage() {
     );
   }
 
+  // Already submitted state
+  if (alreadySubmitted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 pb-20">
+        <div className="text-center p-6 bg-white rounded-xl shadow-lg max-w-md w-full">
+          <div className="text-blue-500 text-4xl mb-4">📝</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">
+            Already Submitted
+          </h1>
+          <div className="text-gray-600 mb-4">
+            <p className="mb-2">
+              You have already submitted a response to this quest.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+              <p className="text-sm text-blue-800">
+                <strong>Quest Reward:</strong> {formData?.reward_per_question}{" "}
+                {formData?.reward_token}
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Check your submission history in your account page to see the
+                status.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Button onClick={() => router.push("/account")} className="w-full">
+              View My Submissions
+            </Button>
+            <Button
+              onClick={() => router.push("/forms")}
+              variant="outline"
+              className="w-full"
+            >
+              Browse Other Quests
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!formData) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8 pb-20 sm:pb-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Form Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
@@ -629,6 +788,14 @@ export default function FormPage() {
               <span className="flex items-center">
                 📊 {formData.form_questions.length} questions
               </span>
+              <span className="flex items-center">
+                🆔{" "}
+                {formData.user_eligibility === "All"
+                  ? "No verification required"
+                  : formData.user_eligibility === "Orb"
+                  ? "Orb verification required"
+                  : "Device verification required"}
+              </span>
             </div>
           </div>
         </div>
@@ -643,6 +810,13 @@ export default function FormPage() {
                 </h3>
                 <p className="text-sm text-yellow-700">
                   Please connect your World ID wallet to submit this form.
+                  {formData && formData.user_eligibility !== "All" && (
+                    <span className="block mt-1">
+                      This quest requires{" "}
+                      <strong>{formData.user_eligibility.toLowerCase()}</strong>{" "}
+                      verification through WorldID.
+                    </span>
+                  )}
                   Rewards will be distributed by the form creator.
                 </p>
               </div>
@@ -660,24 +834,53 @@ export default function FormPage() {
             e.stopPropagation();
             form.handleSubmit();
           }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-6"
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-6 mb-8 sm:mb-4"
         >
           {formData.form_questions.map(renderQuestionField)}
 
+          {/* Verification Info */}
+          {formData.user_eligibility !== "All" && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="text-blue-500 text-xl">🆔</div>
+                <div>
+                  <h3 className="font-medium text-blue-800 mb-1">
+                    WorldID Verification Required
+                  </h3>
+                  <p className="text-sm text-blue-700">
+                    This quest requires{" "}
+                    {formData.user_eligibility.toLowerCase()} verification
+                    through WorldID. You'll be prompted to verify your identity
+                    before submitting your answers.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Submit Button */}
-          <div className="pt-6 border-t border-gray-200">
+          <div className="pt-6 border-t border-gray-200 pb-4">
             <Button
               type="submit"
-              disabled={!isConnected || submitting || !form.state.canSubmit}
+              disabled={
+                !isConnected || submitting || verifying || !form.state.canSubmit
+              }
               className="w-full h-12 text-base font-medium"
             >
-              {submitting ? (
+              {verifying ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Verifying Identity...
+                </>
+              ) : submitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Submitting...
                 </>
+              ) : formData?.user_eligibility !== "All" ? (
+                "Verify & Submit Form"
               ) : (
-                `Submit Form`
+                "Submit Form"
               )}
             </Button>
 

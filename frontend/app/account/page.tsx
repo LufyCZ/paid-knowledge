@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useProfile";
 import { useWorldIdVerification } from "@/hooks/useWorldIdVerification";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
+import { useUserSubmissionHistory } from "@/hooks/useUserSubmissionHistory";
 import { ErrorWithRetry } from "@/components/RetryButton";
 import { useMiniKit } from "../providers";
 import { MiniKit } from "@worldcoin/minikit-js";
@@ -32,11 +33,20 @@ export default function AccountPage() {
     retry,
     updateProfile,
   } = useProfile();
+  const {
+    submissions,
+    loading: submissionsLoading,
+    error: submissionsError,
+    refreshSubmissions,
+  } = useUserSubmissionHistory(address);
   const [isClient, setIsClient] = useState(false);
 
   // Add data refresh on navigation events
   useDataRefresh({
-    refreshFn: refreshProfile,
+    refreshFn: async () => {
+      await refreshProfile();
+      await refreshSubmissions();
+    },
     dependencies: [], // Remove dependencies to prevent infinite loops
   });
 
@@ -545,6 +555,116 @@ export default function AccountPage() {
                 </div>
 
                 <QuestManagement walletAddress={address} />
+              </div>
+
+              {/* Quest Submission History Card */}
+              <div className="bg-white rounded-xl shadow-sm border p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                    My Quest History
+                  </h2>
+                  <p className="text-gray-600">
+                    Track your quest submissions and rewards
+                  </p>
+                </div>
+
+                {submissionsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Loading submissions...</p>
+                  </div>
+                ) : submissionsError ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-700">{submissionsError}</p>
+                    <Button
+                      onClick={refreshSubmissions}
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                ) : !submissions || submissions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-400 text-4xl mb-4">📋</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No submissions yet
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      You haven't submitted to any quests yet. Start
+                      participating to earn rewards!
+                    </p>
+                    <Link href="/forms">
+                      <Button>Browse Available Quests</Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {submissions.map((submission) => (
+                      <div
+                        key={submission.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">
+                              {submission.bounty_forms?.name || "Unknown Quest"}
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
+                              <span>
+                                💰 {submission.total_reward}{" "}
+                                {submission.reward_token}
+                              </span>
+                              <span>
+                                📅{" "}
+                                {new Date(
+                                  submission.submitted_at
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            {/* Status Badge */}
+                            {submission.status === "pending" && (
+                              <span className="px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                                ⏳ Pending Review
+                              </span>
+                            )}
+                            {submission.status === "approved" && (
+                              <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                ✅ Approved
+                              </span>
+                            )}
+                            {submission.status === "rejected" && (
+                              <span className="px-3 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                                ❌ Rejected
+                              </span>
+                            )}
+                            {submission.status === "paid" && (
+                              <span className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                💰 Paid
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {submission.bounty_forms?.description && (
+                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                            {submission.bounty_forms.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+
+                    {submissions.length >= 20 && (
+                      <div className="text-center pt-4">
+                        <p className="text-sm text-gray-500">
+                          Showing your most recent 20 submissions
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
