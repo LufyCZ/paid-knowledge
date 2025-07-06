@@ -665,22 +665,20 @@ function QuestionCard({
               <button
                 onClick={onMoveUp}
                 disabled={index === 0}
-                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${
-                  index === 0
-                    ? "text-gray-300 cursor-not-allowed bg-gray-100"
-                    : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
-                } transition-all duration-150 touch-manipulation`}
+                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${index === 0
+                  ? "text-gray-300 cursor-not-allowed bg-gray-100"
+                  : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
+                  } transition-all duration-150 touch-manipulation`}
               >
                 ↑
               </button>
               <button
                 onClick={onMoveDown}
                 disabled={index === totalQuestions - 1}
-                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${
-                  index === totalQuestions - 1
-                    ? "text-gray-300 cursor-not-allowed bg-gray-100"
-                    : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
-                } transition-all duration-150 touch-manipulation`}
+                className={`w-10 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${index === totalQuestions - 1
+                  ? "text-gray-300 cursor-not-allowed bg-gray-100"
+                  : "text-gray-600 hover:bg-gray-200 active:bg-gray-300 bg-gray-50"
+                  } transition-all duration-150 touch-manipulation`}
               >
                 ↓
               </button>
@@ -790,21 +788,21 @@ function QuestionCard({
                 question.min === t.minLength &&
                 question.max === t.maxLength
             ) && (
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  Min/Max values are preset for{" "}
-                  {
-                    QUESTION_TYPES.find(
-                      (t) =>
-                        t.formType === "text" &&
-                        t.isPreset &&
-                        question.min === t.minLength &&
-                        question.max === t.maxLength
-                    )?.name
-                  }
-                </p>
-              </div>
-            )}
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    Min/Max values are preset for{" "}
+                    {
+                      QUESTION_TYPES.find(
+                        (t) =>
+                          t.formType === "text" &&
+                          t.isPreset &&
+                          question.min === t.minLength &&
+                          question.max === t.maxLength
+                      )?.name
+                    }
+                  </p>
+                </div>
+              )}
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -1289,9 +1287,9 @@ function QuestSetupPage({
               }
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
             >
-              <option value="All">All users (Device or Orb verified)</option>
-              <option value="Device">Device verified only</option>
-              <option value="Orb">Orb verified only</option>
+              <option value="none">All users (Device or Orb verified)</option>
+              <option value="device">Device verified only</option>
+              <option value="orb">Orb verified only</option>
             </select>
             <p className="text-xs text-gray-500 mt-1">
               {verificationRequired === "none" &&
@@ -1775,8 +1773,8 @@ function PhotoPaymentStepPage({
                 {formData.verificationRequired === "none"
                   ? "All Users"
                   : formData.verificationRequired === "device"
-                  ? "Device Verified Only"
-                  : "Orb Verified Only"}
+                    ? "Device Verified Only"
+                    : "Orb Verified Only"}
               </p>
             </div>
           </div>
@@ -1982,8 +1980,8 @@ function PaymentStepPage({
                 {formData.verificationRequired === "none"
                   ? "All Users"
                   : formData.verificationRequired === "device"
-                  ? "Device Verified Only"
-                  : "Orb Verified Only"}
+                    ? "Device Verified Only"
+                    : "Orb Verified Only"}
               </p>
             </div>
           </div>
