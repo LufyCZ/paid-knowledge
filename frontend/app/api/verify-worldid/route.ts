@@ -78,16 +78,20 @@ export async function POST(request: NextRequest) {
 
     if (verificationType === "Device") {
       updateData.device_verified_at = now;
-      // If user doesn't have any verification, set to Device
+      // Only set to Device level if user doesn't have Orb verification
       if (
         !existingProfile?.verification_level ||
         existingProfile.verification_level === "None"
       ) {
         updateData.verification_level = "Device";
       }
+      // If user already has Orb verification, keep it as Orb (don't downgrade)
+      if (existingProfile?.verification_level === "Orb") {
+        updateData.verification_level = "Orb";
+      }
     } else if (verificationType === "Orb") {
       updateData.orb_verified_at = now;
-      // Orb is always the highest level
+      // Orb is always the highest level, always set it
       updateData.verification_level = "Orb";
     }
 

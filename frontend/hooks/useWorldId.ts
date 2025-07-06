@@ -29,17 +29,16 @@ export const useWorldId = (options: UseWorldIdOptions) => {
     error: null,
   });
 
-  const verify = async () => {
+  const verify = async (): Promise<
+    | { success: true; payload: ISuccessResult }
+    | { success: false; error: string }
+  > => {
     if (!installed || !MiniKit.isInstalled()) {
-      console.log("❌ MiniKit not installed or ready");
-      setState((prev) => ({
-        ...prev,
-        error: "MiniKit is not installed or not ready",
-      }));
-      return;
+      const error = "MiniKit is not installed or not ready";
+      console.log("❌", error);
+      return { success: false, error };
     }
 
-    console.log("🔄 Starting World ID verification...");
     setState({ isLoading: true, isSuccess: false, error: null });
 
     try {
@@ -49,33 +48,17 @@ export const useWorldId = (options: UseWorldIdOptions) => {
         verification_level: options.verification_level ?? VerificationLevel.Orb,
       };
 
-      console.log(
-        "📱 Calling MiniKit.commandsAsync.verify with payload:",
-        verifyPayload
-      );
-
-      // World App will open a drawer prompting the user to confirm the operation
       const { finalPayload } = await MiniKit.commandsAsync.verify(
         verifyPayload
       );
 
-      console.log(
-        "📱 MiniKit verification completed with finalPayload:",
-        finalPayload
-      );
-
       if (finalPayload.status === "error") {
-        console.log("❌ MiniKit verification failed with error status");
-        setState({
-          isLoading: false,
-          isSuccess: false,
-          error: "Verification failed in World App",
-        });
-        return;
+        const error = "Verification failed in World App";
+        console.log("❌", error);
+        setState({ isLoading: false, isSuccess: false, error });
+        return { success: false, error };
       }
 
-      console.log("🔄 Sending proof to backend for verification...");
-      // Verify the proof in the backend
       const verifyResponse = await fetch("/api/worldchain/verify", {
         method: "POST",
         headers: {
@@ -89,26 +72,22 @@ export const useWorldId = (options: UseWorldIdOptions) => {
       });
 
       const verifyResponseJson = await verifyResponse.json();
-      console.log("📡 Backend verification response:", verifyResponseJson);
 
-      if (verifyResponseJson.status === 200) {
-        console.log("✅ World ID verification fully completed successfully");
+      if (verifyResponse.ok && verifyResponseJson.status === 200) {
         setState({ isLoading: false, isSuccess: true, error: null });
+        return { success: true, payload: finalPayload as ISuccessResult };
       } else {
-        console.log("❌ Backend verification failed:", verifyResponseJson);
-        setState({
-          isLoading: false,
-          isSuccess: false,
-          error: "Backend verification failed",
-        });
+        const error = "Backend verification failed";
+        console.log("❌", error, verifyResponseJson);
+        setState({ isLoading: false, isSuccess: false, error });
+        return { success: false, error };
       }
-    } catch (error) {
-      console.log("❌ World ID verification error:", error);
-      setState({
-        isLoading: false,
-        isSuccess: false,
-        error: error instanceof Error ? error.message : "Verification failed",
-      });
+    } catch (err) {
+      const error =
+        err instanceof Error ? err.message : "Unknown verification error";
+      console.log("❌", error);
+      setState({ isLoading: false, isSuccess: false, error });
+      return { success: false, error };
     }
   };
 

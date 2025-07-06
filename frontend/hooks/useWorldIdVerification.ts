@@ -7,7 +7,6 @@ import { VerificationLevel } from "@worldcoin/minikit-js";
 
 interface UseWorldIdVerificationProps {
   verificationType: "Device" | "Orb";
-  formId?: string; // Add optional formId to make verification unique
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -20,7 +19,6 @@ interface VerificationState {
 
 export const useWorldIdVerification = ({
   verificationType,
-  formId,
   onSuccess,
   onError,
 }: UseWorldIdVerificationProps) => {
@@ -31,15 +29,13 @@ export const useWorldIdVerification = ({
     error: null,
   });
 
-  // Create a unique action ID that includes form ID and timestamp to avoid "already verified" errors
-  const uniqueActionId = formId
-    ? `${verificationType.toLowerCase()}-verification-${formId}`
-    : `${verificationType.toLowerCase()}-verification-${Date.now()}`;
+  // Use fixed action ID: either "device-verification" or "orb-verification"
+  const actionId =
+    verificationType === "Device" ? "device-verification" : "orb-verification";
 
-  // Create a simpler World ID hook that doesn't do backend verification
   const worldId = useWorldId({
-    action: uniqueActionId,
-    signal: address || undefined, // Use wallet address as signal
+    action: actionId,
+    signal: address || undefined,
     verification_level:
       verificationType === "Device"
         ? VerificationLevel.Device
@@ -61,36 +57,52 @@ export const useWorldIdVerification = ({
     try {
       // Step 1: Perform World ID verification
       console.log("📱 Calling worldId.verify()...");
-      await worldId.verify();
+      const worldIdResult = await worldId.verify();
 
       console.log("✅ worldId.verify() completed");
-      console.log("worldId.isSuccess:", worldId.isSuccess);
-      console.log("worldId.error:", worldId.error);
-      console.log("worldId.isLoading:", worldId.isLoading);
+      console.log("worldId result:", worldIdResult);
 
       // Check for errors from World ID verification
-      if (worldId.error) {
-        console.log("❌ World ID verification error:", worldId.error);
-        throw new Error(worldId.error);
+      if (!worldIdResult.success) {
+        console.log("❌ World ID verification error:", worldIdResult.error);
+        throw new Error(worldIdResult.error || "World ID verification failed");
       }
 
-      // Wait a moment for state to update and check success
-      // The worldId.verify() should have completed successfully if we reach here without error
-      console.log("🔄 World ID verification completed successfully");
+      // Step 2: Call backend API to store verification
+      console.log("💾 Storing verification in backend...");
+      const backendResponse = await fetch("/api/verify-worldid", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          walletAddress: address,
+          verificationType,
+          worldIdPayload: worldIdResult.payload,
+          actionId: actionId,
+          signal: address,
+        }),
+      });
 
-      // For form submissions, we don't need to store verification in the backend
-      // The fact that WorldID verification passed is sufficient
-      console.log(
-        "✅ Verification successful, skipping backend storage for form submission"
-      );
+      if (!backendResponse.ok) {
+        const errorData = await backendResponse.json();
+        console.log("❌ Backend verification error:", errorData);
+        throw new Error(errorData.error || "Failed to store verification");
+      }
+
+      const backendResult = await backendResponse.json();
+      console.log("✅ Backend verification successful:", backendResult);
+
       setState({ isLoading: false, isSuccess: true, error: null });
       onSuccess?.();
-      return { verified: true, timestamp: new Date().toISOString() };
+      return {
+        verified: true,
+        timestamp: new Date().toISOString(),
+        profile: backendResult.profile,
+      };
     } catch (error) {
       console.log("❌ Verification process failed:");
       console.log("Error:", error);
-      console.log("worldId.error:", worldId.error);
-      console.log("worldId.isSuccess:", worldId.isSuccess);
 
       const errorMessage =
         error instanceof Error ? error.message : "Verification failed";

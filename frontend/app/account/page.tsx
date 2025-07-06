@@ -11,6 +11,7 @@ import {
 import { useWorldIdVerification } from "@/hooks/useWorldIdVerification";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { useUserSubmissionHistory } from "@/hooks/useUserSubmissionHistory";
+import { useToast } from "@/components/ui/toast";
 import { ErrorWithRetry } from "@/components/RetryButton";
 import { useMiniKit } from "../providers";
 import { MiniKit } from "@worldcoin/minikit-js";
@@ -23,6 +24,7 @@ import Link from "next/link";
 export default function AccountPage() {
   const { isConnected, address, connect, worldchainUsername } = useWallet();
   const { installed } = useMiniKit();
+  const { showToast } = useToast();
   const {
     profile,
     isLoading,
@@ -58,24 +60,34 @@ export default function AccountPage() {
   // World ID verification hooks
   const deviceVerification = useWorldIdVerification({
     verificationType: "Device",
-    onSuccess: () => {
-      refreshProfile();
+    onSuccess: async () => {
+      showToast("✅ Device verification successful!", "success");
+      // Wait a bit for backend to process, then refresh
+      setTimeout(async () => {
+        await refreshProfile();
+      }, 1000);
       setVerificationInProgress(null);
     },
     onError: (error) => {
       console.error("Device verification failed:", error);
+      showToast(`❌ Device verification failed: ${error}`, "error");
       setVerificationInProgress(null);
     },
   });
 
   const orbVerification = useWorldIdVerification({
     verificationType: "Orb",
-    onSuccess: () => {
-      refreshProfile();
+    onSuccess: async () => {
+      showToast("🔮 Orb verification successful!", "success");
+      // Wait a bit for backend to process, then refresh
+      setTimeout(async () => {
+        await refreshProfile();
+      }, 1000);
       setVerificationInProgress(null);
     },
     onError: (error) => {
       console.error("Orb verification failed:", error);
+      showToast(`❌ Orb verification failed: ${error}`, "error");
       setVerificationInProgress(null);
     },
   });
